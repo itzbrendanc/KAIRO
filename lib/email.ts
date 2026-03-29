@@ -37,22 +37,33 @@ export async function sendVerificationEmail(email: string, token: string, req?: 
   if (!transport || !process.env.SMTP_FROM) {
     return {
       sent: false,
-      verifyUrl
+      verifyUrl,
+      error: null as string | null
     };
   }
 
-  await transport.sendMail({
-    from: process.env.SMTP_FROM,
-    to: email,
-    subject,
-    text,
-    html
-  });
+  try {
+    await transport.sendMail({
+      from: process.env.SMTP_FROM,
+      to: email,
+      subject,
+      text,
+      html
+    });
 
-  return {
-    sent: true,
-    verifyUrl
-  };
+    return {
+      sent: true,
+      verifyUrl,
+      error: null as string | null
+    };
+  } catch (error) {
+    console.error("Verification email delivery failed", error);
+    return {
+      sent: false,
+      verifyUrl,
+      error: error instanceof Error ? error.message : "Unable to send verification email."
+    };
+  }
 }
 
 export async function sendCampaignToAudience(campaign: {
@@ -67,13 +78,17 @@ export async function sendCampaignToAudience(campaign: {
 
   for (const recipient of recipients) {
     if (transport && process.env.SMTP_FROM) {
-      await transport.sendMail({
-        from: process.env.SMTP_FROM,
-        to: recipient.email,
-        subject: campaign.subject,
-        text: campaign.previewText ?? "KAIRO update",
-        html: campaign.contentHtml
-      });
+      try {
+        await transport.sendMail({
+          from: process.env.SMTP_FROM,
+          to: recipient.email,
+          subject: campaign.subject,
+          text: campaign.previewText ?? "KAIRO update",
+          html: campaign.contentHtml
+        });
+      } catch (error) {
+        console.error(`Campaign send failed for ${recipient.email}`, error);
+      }
     }
 
     await createCampaignEvent({

@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requiresVerification: true,
         message: verification.sent
           ? "Your email is not verified yet. We sent a fresh verification link."
-          : `SMTP is not configured, so no real email was sent. Use this local verification link: ${verification.verifyUrl}`
+          : `Email delivery is unavailable right now. Use this verification link instead: ${verification.verifyUrl}`
       });
     }
 

@@ -58,13 +58,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ok: true,
       message: verification.sent
         ? "Verification email sent. Open the link in your inbox to activate your account."
-        : `SMTP is not configured, so no real email was sent. Use this local verification link: ${verification.verifyUrl}`
+        : `Email delivery is unavailable right now. Use this verification link instead: ${verification.verifyUrl}`
     });
   } catch (error) {
     console.error("Signup failed", error);
     return res.status(500).json({
-      error:
-        "Signup failed. The production database may not be initialized yet. Apply the Prisma migration to Supabase, then try again."
+      error: error instanceof Error ? `Signup failed: ${error.message}` : "Signup failed."
     });
   }
 }
