@@ -114,8 +114,11 @@ function buildHistoryLabels(length: number) {
   );
 }
 
-function normalizeSymbolForProvider(symbol: string) {
-  return symbol.toUpperCase().replace(".", "-");
+function providerSymbolCandidates(symbol: string) {
+  const normalized = symbol.toUpperCase();
+  return Array.from(
+    new Set([normalized, normalized.replace(".", "-"), normalized.replace("-", ".")])
+  );
 }
 
 function getStockMeta(symbol: string) {
@@ -187,56 +190,51 @@ async function fetchFinnhubHistory(symbol: string, fallback: StockQuote) {
   }
 
   try {
-    const providerSymbol = normalizeSymbolForProvider(symbol);
     const now = Math.floor(Date.now() / 1000);
     const from = now - 60 * 60 * 24;
-    const response = await fetch(
-      `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(providerSymbol)}&resolution=60&from=${from}&to=${now}&token=${process.env.FINNHUB_API_KEY}`,
-      { headers: { Accept: "application/json" }, cache: "no-store" }
-    );
+    for (const providerSymbol of providerSymbolCandidates(symbol)) {
+      const response = await fetch(
+        `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(providerSymbol)}&resolution=60&from=${from}&to=${now}&token=${process.env.FINNHUB_API_KEY}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
 
-    if (!response.ok) {
+      if (!response.ok) {
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        c?: number[];
+        t?: number[];
+        s?: string;
+      };
+
+      if (!data.c?.length || data.s !== "ok") {
+        continue;
+      }
+
+      const closes = data.c.slice(-21).map((value) => Number(value.toFixed(2)));
+      const timestamps = data.t?.slice(-closes.length) ?? [];
+      const labels = timestamps.map((value) =>
+        new Date(value * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      );
+
       return {
-        history: fallback.history,
-        historyLabels: fallback.historyLabels,
-        fetchedAt: fallback.fetchedAt
+        history: closes,
+        historyLabels: labels.length === closes.length ? labels : buildHistoryLabels(closes.length),
+        fetchedAt: timestamps.length
+          ? new Date(timestamps[timestamps.length - 1] * 1000).toISOString()
+          : new Date().toISOString()
       };
     }
-
-    const data = (await response.json()) as {
-      c?: number[];
-      t?: number[];
-      s?: string;
-    };
-
-    if (!data.c?.length || data.s !== "ok") {
-      return {
-        history: fallback.history,
-        historyLabels: fallback.historyLabels,
-        fetchedAt: fallback.fetchedAt
-      };
-    }
-
-    const closes = data.c.slice(-21).map((value) => Number(value.toFixed(2)));
-    const timestamps = data.t?.slice(-closes.length) ?? [];
-    const labels = timestamps.map((value) =>
-      new Date(value * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    );
-
-    return {
-      history: closes,
-      historyLabels: labels.length === closes.length ? labels : buildHistoryLabels(closes.length),
-      fetchedAt: timestamps.length
-        ? new Date(timestamps[timestamps.length - 1] * 1000).toISOString()
-        : new Date().toISOString()
-    };
   } catch {
-    return {
-      history: fallback.history,
-      historyLabels: fallback.historyLabels,
-      fetchedAt: fallback.fetchedAt
-    };
+    // use fallback below
   }
+
+  return {
+    history: fallback.history,
+    historyLabels: fallback.historyLabels,
+    fetchedAt: fallback.fetchedAt
+  };
 }
 
 async function fetchFinnhubQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
@@ -245,47 +243,50 @@ async function fetchFinnhubQuote(symbol: string, fallback: StockQuote, includeHi
   }
 
   try {
-    const providerSymbol = normalizeSymbolForProvider(symbol);
-    const response = await fetch(
-      `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(providerSymbol)}&token=${process.env.FINNHUB_API_KEY}`,
-      { headers: { Accept: "application/json" }, cache: "no-store" }
-    );
+    for (const providerSymbol of providerSymbolCandidates(symbol)) {
+      const response = await fetch(
+        `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(providerSymbol)}&token=${process.env.FINNHUB_API_KEY}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
 
-    if (!response.ok) {
-      return null;
+      if (!response.ok) {
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        c?: number;
+        pc?: number;
+        t?: number;
+      };
+
+      if (!data.c || !data.pc) {
+        continue;
+      }
+
+      const historyData = includeHistory
+        ? await fetchFinnhubHistory(symbol, fallback)
+        : {
+            history: fallback.history,
+            historyLabels: fallback.historyLabels,
+            fetchedAt: data.t ? new Date(data.t * 1000).toISOString() : new Date().toISOString()
+          };
+
+      return {
+        ...fallback,
+        price: Number(data.c.toFixed(2)),
+        changePercent: Number((((data.c - data.pc) / data.pc) * 100).toFixed(2)),
+        history: historyData.history,
+        historyLabels: historyData.historyLabels,
+        source: "Finnhub",
+        fetchedAt: historyData.fetchedAt,
+        isLive: true
+      } satisfies StockQuote;
     }
-
-    const data = (await response.json()) as {
-      c?: number;
-      pc?: number;
-      t?: number;
-    };
-
-    if (!data.c || !data.pc) {
-      return null;
-    }
-
-    const historyData = includeHistory
-      ? await fetchFinnhubHistory(symbol, fallback)
-      : {
-          history: fallback.history,
-          historyLabels: fallback.historyLabels,
-          fetchedAt: data.t ? new Date(data.t * 1000).toISOString() : new Date().toISOString()
-        };
-
-    return {
-      ...fallback,
-      price: Number(data.c.toFixed(2)),
-      changePercent: Number((((data.c - data.pc) / data.pc) * 100).toFixed(2)),
-      history: historyData.history,
-      historyLabels: historyData.historyLabels,
-      source: "Finnhub",
-      fetchedAt: historyData.fetchedAt,
-      isLive: true
-    } satisfies StockQuote;
   } catch {
     return null;
   }
+
+  return null;
 }
 
 async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
@@ -294,75 +295,78 @@ async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote, incl
   }
 
   try {
-    const providerSymbol = normalizeSymbolForProvider(symbol);
-    const [quoteResponse, intradayResponse] = await Promise.all([
-      fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(providerSymbol)}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
-        { headers: { Accept: "application/json" }, cache: "no-store" }
-      ),
-      includeHistory
-        ? fetch(
-            `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(providerSymbol)}&interval=5min&outputsize=compact&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
-            { headers: { Accept: "application/json" }, cache: "no-store" }
-          )
-        : Promise.resolve(null)
-    ]);
+    for (const providerSymbol of providerSymbolCandidates(symbol)) {
+      const [quoteResponse, intradayResponse] = await Promise.all([
+        fetch(
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(providerSymbol)}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        ),
+        includeHistory
+          ? fetch(
+              `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(providerSymbol)}&interval=5min&outputsize=compact&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
+              { headers: { Accept: "application/json" }, cache: "no-store" }
+            )
+          : Promise.resolve(null)
+      ]);
 
-    if (!quoteResponse.ok) {
-      return null;
-    }
+      if (!quoteResponse.ok) {
+        continue;
+      }
 
-    const quoteData = (await quoteResponse.json()) as {
-      ["Global Quote"]?: Record<string, string>;
-      Note?: string;
-      Information?: string;
-    };
-    const globalQuote = quoteData["Global Quote"];
-
-    if (!globalQuote?.["05. price"] || !globalQuote["10. change percent"]) {
-      return null;
-    }
-
-    let history = fallback.history;
-    let historyLabels = fallback.historyLabels;
-    let fetchedAt = new Date().toISOString();
-
-    if (intradayResponse?.ok) {
-      const intradayData = (await intradayResponse.json()) as {
-        ["Time Series (5min)"]?: Record<string, { ["4. close"]?: string }>;
+      const quoteData = (await quoteResponse.json()) as {
+        ["Global Quote"]?: Record<string, string>;
+        Note?: string;
+        Information?: string;
       };
-      const series = intradayData["Time Series (5min)"];
+      const globalQuote = quoteData["Global Quote"];
 
-      if (series) {
-        const entries = Object.entries(series)
-          .sort((left, right) => new Date(left[0]).getTime() - new Date(right[0]).getTime())
-          .slice(-21);
+      if (!globalQuote?.["05. price"] || !globalQuote["10. change percent"]) {
+        continue;
+      }
 
-        if (entries.length > 3) {
-          history = entries.map(([, candle]) =>
-            Number(Number(candle["4. close"] ?? fallback.price).toFixed(2))
-          );
-          historyLabels = entries.map(([timestamp]) =>
-            new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-          );
-          fetchedAt = new Date(entries[entries.length - 1][0]).toISOString();
+      let history = fallback.history;
+      let historyLabels = fallback.historyLabels;
+      let fetchedAt = new Date().toISOString();
+
+      if (intradayResponse?.ok) {
+        const intradayData = (await intradayResponse.json()) as {
+          ["Time Series (5min)"]?: Record<string, { ["4. close"]?: string }>;
+        };
+        const series = intradayData["Time Series (5min)"];
+
+        if (series) {
+          const entries = Object.entries(series)
+            .sort((left, right) => new Date(left[0]).getTime() - new Date(right[0]).getTime())
+            .slice(-21);
+
+          if (entries.length > 3) {
+            history = entries.map(([, candle]) =>
+              Number(Number(candle["4. close"] ?? fallback.price).toFixed(2))
+            );
+            historyLabels = entries.map(([timestamp]) =>
+              new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            );
+            fetchedAt = new Date(entries[entries.length - 1][0]).toISOString();
+          }
         }
       }
-    }
 
-    return {
-      ...fallback,
-      price: Number(Number(globalQuote["05. price"]).toFixed(2)),
-      changePercent: Number(globalQuote["10. change percent"].replace("%", "")),
-      history,
-      historyLabels,
-      source: "Alpha Vantage",
-      fetchedAt,
-      isLive: true
-    } satisfies StockQuote;
+      return {
+        ...fallback,
+        price: Number(Number(globalQuote["05. price"]).toFixed(2)),
+        changePercent: Number(globalQuote["10. change percent"].replace("%", "")),
+        history,
+        historyLabels,
+        source: "Alpha Vantage",
+        fetchedAt,
+        isLive: true
+      } satisfies StockQuote;
+    }
   } catch {
     return null;
   }
+
+  return null;
 }
 
 async function fetchInfowayQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
@@ -557,35 +561,37 @@ export async function fetchNews(symbol: string) {
     try {
       const fromDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString().slice(0, 10);
       const toDate = new Date().toISOString().slice(0, 10);
-      const response = await fetch(
-        `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(normalizeSymbolForProvider(symbol))}&from=${fromDate}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`,
-        { headers: { Accept: "application/json" }, cache: "no-store" }
-      );
+      for (const providerSymbol of providerSymbolCandidates(symbol)) {
+        const response = await fetch(
+          `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(providerSymbol)}&from=${fromDate}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        );
 
-      if (response.ok) {
-        const data = (await response.json()) as Array<Record<string, unknown>>;
-        const items = data
-          .filter((article) => article.headline && article.url)
-          .slice(0, 6)
-          .map((article) => {
-            const title = String(article.headline);
-            const summary = String(article.summary ?? "No summary available.");
-            return {
-              title,
-              url: String(article.url),
-              source: "Finnhub",
-              summary,
-              sentiment: scoreHeadlineSentiment(`${title} ${summary}`),
-              publishedAt: article.datetime
-                ? new Date(Number(article.datetime) * 1000).toISOString()
-                : new Date().toISOString(),
-              isLive: true
-            } satisfies NewsItem;
-          });
+        if (response.ok) {
+          const data = (await response.json()) as Array<Record<string, unknown>>;
+          const items = data
+            .filter((article) => article.headline && article.url)
+            .slice(0, 6)
+            .map((article) => {
+              const title = String(article.headline);
+              const summary = String(article.summary ?? "No summary available.");
+              return {
+                title,
+                url: String(article.url),
+                source: "Finnhub",
+                summary,
+                sentiment: scoreHeadlineSentiment(`${title} ${summary}`),
+                publishedAt: article.datetime
+                  ? new Date(Number(article.datetime) * 1000).toISOString()
+                  : new Date().toISOString(),
+                isLive: true
+              } satisfies NewsItem;
+            });
 
-        if (items.length > 0) {
-          writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
-          return items;
+          if (items.length > 0) {
+            writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
+            return items;
+          }
         }
       }
     } catch {
@@ -758,13 +764,15 @@ export async function getMarketBoard() {
   const stocks = await Promise.all(
     STOCKS.map((stock) => fetchInfowayPrice(stock.symbol, { includeHistory: false }))
   );
+  const liveStocks = stocks.filter((stock) => stock.isLive);
+  const board = liveStocks.length > 0 ? liveStocks : stocks;
 
   globalThis.__kairoBoardCache = {
-    value: stocks,
+    value: board,
     expiresAt: Date.now() + BOARD_TTL_MS
   };
 
-  return stocks;
+  return board;
 }
 
 export async function getSignalBoard(symbols: string[]) {
