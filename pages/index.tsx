@@ -23,109 +23,125 @@ export default function Home() {
   }
 
   return (
-    <div className="landing landing-future">
-      <div className="landing-noise" aria-hidden="true" />
-      <div className="landing-orb landing-orb-one" aria-hidden="true" />
-      <div className="landing-orb landing-orb-two" aria-hidden="true" />
-      <div className="landing-gridline" aria-hidden="true" />
+    <div className="landing landing-stock">
+      <div className="landing-stock-glow" aria-hidden="true" />
+      <div className="landing-stock-shell">
+        <header className="landing-stock-nav">
+          <div className="landing-stock-brand">
+            <KairoLogo size="sm" />
+          </div>
+          <nav className="landing-stock-links">
+            <a href="#home">Home</a>
+            <a href="#activity">Market Activity</a>
+            <a href="#insight">News & Insight</a>
+            <a href="#solution">Solution</a>
+            <a href="#about">About</a>
+          </nav>
+          <div className="landing-stock-search">Signal Search</div>
+        </header>
 
-      <section className="landing-hero">
-        <div className="landing-hero-copy">
-          <div className="landing-kicker">KAIRO // adaptive market cognition</div>
-          <KairoLogo size="lg" stacked />
-          <h1 className="landing-title">
-            A signal system for the next market cycle.
-          </h1>
-          <p className="landing-lead">
-            KAIRO turns price action, market structure, and headline flow into a cleaner trading surface with live boards, AI signals, portfolio simulation, and premium collaboration.
-          </p>
-          <div className="landing-chip-row">
-            <span className="landing-chip">Live quote matrix</span>
-            <span className="landing-chip">AI signal engine</span>
-            <span className="landing-chip">Premium research rooms</span>
+        <section className="landing-stock-hero" id="home">
+          <div className="landing-stock-copy">
+            <div className="landing-stock-kicker">KAIRO / live market intelligence</div>
+            <h1 className="landing-stock-title">
+              Trade the market with a cleaner future-facing edge.
+            </h1>
+            <p className="landing-stock-lead">
+              Live quotes, AI signals, curated market news, and premium trading workflows wrapped in a sharper interface built to feel fast, modern, and credible.
+            </p>
+            <div className="landing-stock-actions">
+              <Link className="primary-button link-button" href="/signup">
+                Start Free
+              </Link>
+              <Link className="ghost-button link-button" href="/login">
+                Sign In
+              </Link>
+            </div>
+            <div className="landing-stock-linkrow">
+              <a href="#activity">View Market Activity</a>
+              <a href="#solution">Learn More</a>
+            </div>
           </div>
-          <div className="landing-actions">
-            <Link className="primary-button link-button landing-primary" href="/signup">
-              Enter KAIRO
-            </Link>
-            <Link className="ghost-button link-button landing-secondary" href="/login">
-              Existing account
-            </Link>
-          </div>
-        </div>
 
-        <div className="landing-visual panel">
-          <div className="landing-visual-top">
-            <span className="landing-node">signal lattice</span>
-            <span className="landing-node">live mode</span>
+          <div className="landing-stock-visual">
+            <div className="landing-stock-media">
+              <img src="/kairo-hero.gif" alt="KAIRO market motion backdrop" />
+              <div className="landing-stock-chart" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="landing-stock-tag landing-stock-tag-positive">+3.78%</div>
+              <div className="landing-stock-tag landing-stock-tag-alert">AI BUY</div>
+            </div>
           </div>
-          <div className="landing-spectrum" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
-            <span />
+        </section>
+
+        <section className="landing-stock-strip" id="activity">
+          <div className="landing-stock-strip-head">
+            <span>Top market pulse</span>
+            <a href="/dashboard">Open live board</a>
           </div>
-          <div className="landing-visual-grid">
-            <article className="landing-metric-card">
-              <small>MSFT / live structure</small>
-              <strong>BUY</strong>
-              <span>Uptrend, constructive news tone, strong relative momentum.</span>
+          <div className="landing-stock-tickers">
+            <article className="landing-stock-ticker">
+              <strong>S&amp;P Futures</strong>
+              <span>5,274.8</span>
+              <small className="positive">+18.7 (0.57%)</small>
             </article>
-            <article className="landing-metric-card">
-              <small>NVDA / board pulse</small>
-              <strong>+2.84%</strong>
-              <span>Real-time board refresh and watchlist-first monitoring.</span>
+            <article className="landing-stock-ticker">
+              <strong>Nasdaq</strong>
+              <span>17,158.8</span>
+              <small className="positive">+24.7 (0.28%)</small>
             </article>
-            <article className="landing-metric-card landing-metric-card-accent">
-              <small>premium layer</small>
-              <strong>Full AI reasoning</strong>
-              <span>Deeper trend context, signal confidence, groups, and simulator guidance.</span>
+            <article className="landing-stock-ticker">
+              <strong>EUR/USD</strong>
+              <span>1.0856</span>
+              <small className="negative">-0.0045 (0.02%)</small>
+            </article>
+            <article className="landing-stock-ticker">
+              <strong>Bitcoin</strong>
+              <span>68,420</span>
+              <small className="positive">+782.4 (1.16%)</small>
+            </article>
+            <article className="landing-stock-ticker">
+              <strong>NVDA</strong>
+              <span>Live AI Signal</span>
+              <small className="positive">BUY / momentum active</small>
             </article>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="landing-band">
-        <div className="landing-stat">
-          <strong>15s</strong>
-          <span>live board refresh rhythm</span>
-        </div>
-        <div className="landing-stat">
-          <strong>AI</strong>
-          <span>signals layered over market structure</span>
-        </div>
-        <div className="landing-stat">
-          <strong>Free + Premium</strong>
-          <span>clean entry path with upgrade depth</span>
-        </div>
-      </section>
-
-      <section className="landing-lower">
-        <div className="landing-story panel">
-          <div className="eyebrow">Why it feels different</div>
-          <h2>Built like a trading interface, not a generic finance landing page.</h2>
-          <p className="muted-copy">
-            The experience is designed around motion, signal density, and faster pattern recognition. KAIRO gives you live boards, sharper watchlists, cleaner headlines, and a visual system that feels intentional instead of interchangeable.
-          </p>
-        </div>
-
-        <div className="marketing-box landing-subscribe panel">
-          <div className="eyebrow">Launch updates</div>
-          <h3>Get product drops and platform updates</h3>
-          <div className="landing-actions landing-subscribe-row">
-            <input
-              className="text-input"
-              placeholder="Email for updates"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <button className="primary-button" onClick={subscribe}>Subscribe</button>
+        <section className="landing-stock-bottom" id="solution">
+          <div className="landing-stock-panel">
+            <div className="eyebrow">Built for confidence</div>
+            <h2>Less noise. Better signal density.</h2>
+            <p className="muted-copy">
+              KAIRO combines live market boards, chart-driven intelligence, premium watchlists, and collaborative signal rooms inside a faster, darker, more intentional trading environment.
+            </p>
           </div>
-          {message ? <div className="success-banner">{message}</div> : null}
-        </div>
-      </section>
+
+          <div className="landing-stock-panel landing-stock-panel-subscribe" id="about">
+            <div className="eyebrow">Stay close to launch updates</div>
+            <h3>Get product drops and platform emails</h3>
+            <div className="landing-stock-actions landing-stock-subscribe-row">
+              <input
+                className="text-input"
+                placeholder="Email for updates"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+              <button className="primary-button" onClick={subscribe}>Subscribe</button>
+            </div>
+            {message ? <div className="success-banner">{message}</div> : null}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
