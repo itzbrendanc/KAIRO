@@ -118,6 +118,37 @@ function normalizeSymbolForProvider(symbol: string) {
   return symbol.toUpperCase().replace(".", "-");
 }
 
+function getStockMeta(symbol: string) {
+  return STOCKS.find((item) => item.symbol === symbol.toUpperCase()) ?? null;
+}
+
+function buildNewsQuery(symbol: string) {
+  const stock = getStockMeta(symbol);
+  const company = stock?.company ?? symbol;
+  const exactTicker = `"${symbol.toUpperCase()}"`;
+  const exactCompany = `"${company}"`;
+  return `${exactCompany} OR ${exactTicker}`;
+}
+
+function isRelevantArticle(symbol: string, company: string, article: { title?: string; description?: string; content?: string }) {
+  const haystack = `${article.title ?? ""} ${article.description ?? ""} ${article.content ?? ""}`.toLowerCase();
+  const normalizedSymbol = symbol.toLowerCase();
+  const companyTerms = company
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((term) => term.length >= 3);
+
+  const matchesCompany = companyTerms.some((term) => haystack.includes(term));
+  const matchesTicker =
+    haystack.includes(` ${normalizedSymbol} `) ||
+    haystack.startsWith(`${normalizedSymbol} `) ||
+    haystack.endsWith(` ${normalizedSymbol}`) ||
+    haystack.includes(`(${normalizedSymbol})`);
+
+  return matchesCompany || matchesTicker;
+}
+
 function buildFallbackQuote(symbol: string) {
   const stock = STOCKS.find((item) => item.symbol === symbol);
   const history = mockHistory(symbol);
@@ -507,6 +538,8 @@ export async function fetchNews(symbol: string) {
   if (cached) {
     return cached;
   }
+  const stock = getStockMeta(symbol);
+  const company = stock?.company ?? symbol;
 
   const fallback = [
     {
@@ -563,14 +596,23 @@ export async function fetchNews(symbol: string) {
   if (process.env.NEWS_API_KEY) {
     try {
       const response = await fetch(
-        `https://newsapi.org/v2/everything?q=${encodeURIComponent(symbol)}&language=en&pageSize=6&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`,
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(buildNewsQuery(symbol))}&language=en&pageSize=12&sortBy=publishedAt&searchIn=title,description&apiKey=${process.env.NEWS_API_KEY}`,
         { headers: { Accept: "application/json" }, cache: "no-store" }
       );
 
       if (response.ok) {
         const data = (await response.json()) as { articles?: Array<Record<string, unknown>> };
         const items = (data.articles ?? [])
-          .filter((article) => article.title && article.url)
+          .filter(
+            (article) =>
+              article.title &&
+              article.url &&
+              isRelevantArticle(symbol, company, {
+                title: String(article.title ?? ""),
+                description: String(article.description ?? ""),
+                content: String(article.content ?? "")
+              })
+          )
           .slice(0, 6)
           .map((article) => ({
             title: String(article.title),
