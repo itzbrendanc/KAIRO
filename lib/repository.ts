@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, Subscription, Watchlist } from "@prisma/client";
+import { ensureDatabaseInitialized } from "@/lib/db-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { STOCKS } from "@/data/stocks";
 
@@ -104,6 +105,7 @@ function lower(email: string) {
 
 async function withFallback<T>(primary: () => Promise<T>, fallback: () => T | Promise<T>) {
   try {
+    await ensureDatabaseInitialized();
     return await primary();
   } catch {
     return fallback();
