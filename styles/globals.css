@@ -1,5 +1,7 @@
 :root {
   color-scheme: dark;
+  --font-body: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue", "Segoe UI", sans-serif;
   --bg: #050505;
   --bg-soft: #0f0f0f;
   --panel: rgba(255, 255, 255, 0.04);
@@ -23,12 +25,23 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-body), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   background:
     radial-gradient(circle at top left, rgba(217, 178, 95, 0.17), transparent 26%),
     radial-gradient(circle at 85% 8%, rgba(255, 255, 255, 0.08), transparent 20%),
     linear-gradient(180deg, #030303 0%, #090909 45%, #111111 100%);
   color: var(--text);
+}
+
+h1,
+h2,
+h3,
+.kairo-name,
+.landing-stock-title,
+.landing-title,
+.stat-value,
+.market-overview-card strong {
+  font-family: var(--font-display), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 a {
@@ -730,6 +743,96 @@ textarea {
   min-height: 440px;
 }
 
+.dashboard-cinematic {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-cinematic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 12, 16, 0.92) 0%, rgba(8, 12, 16, 0.52) 52%, rgba(8, 12, 16, 0.82) 100%),
+    url("/kairo-hero.gif") center/cover no-repeat;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.dashboard-cinematic > * {
+  position: relative;
+  z-index: 1;
+}
+
+.market-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.market-overview-card {
+  display: grid;
+  gap: 10px;
+}
+
+.market-overview-card strong {
+  font-size: 1.7rem;
+  color: #f8f2e4;
+}
+
+.market-overview-card span {
+  color: var(--muted);
+}
+
+.movers-list,
+.sector-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mover-card,
+.sector-card {
+  display: grid;
+  gap: 6px;
+  padding: 15px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mover-card {
+  text-align: left;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.mover-card strong,
+.sector-card strong {
+  color: #f4efe4;
+}
+
+.mover-card span,
+.sector-card span {
+  color: var(--muted);
+}
+
+.dashboard-gif-frame {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 240px;
+}
+
+.dashboard-gif-frame img {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.15) contrast(0.95) brightness(0.78);
+}
+
 .signal-card {
   display: grid;
   gap: 12px;
@@ -1053,6 +1156,7 @@ textarea {
   .two-column,
   .hero,
   .dashboard-grid,
+  .market-overview-grid,
   .landing-stock-hero,
   .landing-stock-bottom,
   .landing-stock-tickers {

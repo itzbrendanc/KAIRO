@@ -11,6 +11,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
 
   return (
     <SessionProvider session={session}>
+      <div>
       {isAuthPage || isHomePage ? (
         <Component {...pageProps} />
       ) : (
@@ -24,6 +25,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
           <Component {...pageProps} />
         </AppShell>
       )}
+      </div>
     </SessionProvider>
   );
 }

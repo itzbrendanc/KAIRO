@@ -147,10 +147,60 @@ export function Dashboard({
   const liveBoardCount = board.filter((item) => item.isLive).length;
   const liveNewsCount = data.news.filter((item) => item.isLive).length;
   const visibleNews = data.news.filter((item) => item.isLive);
+  const marketOverview = useMemo(
+    () => [
+      {
+        label: "Lead symbol",
+        value: data.quote.symbol,
+        helper: `${data.quote.source} · ${new Date(data.quote.fetchedAt).toLocaleTimeString()}`
+      },
+      {
+        label: "Live board",
+        value: `${liveBoardCount}/${board.length}`,
+        helper: "quotes live"
+      },
+      {
+        label: "Headline flow",
+        value: `${visibleNews.length}`,
+        helper: "live headlines"
+      },
+      {
+        label: "Watchlist",
+        value: `${watchlist.length}`,
+        helper: "tracked names"
+      }
+    ],
+    [board.length, data.quote.fetchedAt, data.quote.source, data.quote.symbol, liveBoardCount, visibleNews.length, watchlist.length]
+  );
+  const topGainers = useMemo(
+    () => [...board].sort((left, right) => right.changePercent - left.changePercent).slice(0, 4),
+    [board]
+  );
+  const topLosers = useMemo(
+    () => [...board].sort((left, right) => left.changePercent - right.changePercent).slice(0, 4),
+    [board]
+  );
+  const sectorLeaders = useMemo(() => {
+    const grouped = board.reduce<Record<string, { total: number; count: number }>>((acc, stock) => {
+      const current = acc[stock.sector] ?? { total: 0, count: 0 };
+      current.total += stock.changePercent;
+      current.count += 1;
+      acc[stock.sector] = current;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .map(([sector, values]) => ({
+        sector,
+        avgChange: values.total / values.count
+      }))
+      .sort((left, right) => right.avgChange - left.avgChange)
+      .slice(0, 6);
+  }, [board]);
 
   return (
     <div className="stack">
-      <section className="hero panel terminal-panel">
+      <section className="hero panel terminal-panel dashboard-cinematic">
         <div>
           <KairoLogo size="sm" />
           <div className="eyebrow">AI investing workspace</div>
@@ -201,6 +251,90 @@ export function Dashboard({
           value={data.signal.recommendation}
           helper={premium ? `${Math.round(data.signal.confidence * 100)}% confidence` : "Premium unlocks full confidence"}
         />
+      </section>
+
+      <section className="market-overview-grid">
+        {marketOverview.map((item) => (
+          <div key={item.label} className="panel market-overview-card">
+            <div className="eyebrow">{item.label}</div>
+            <strong>{item.value}</strong>
+            <span>{item.helper}</span>
+          </div>
+        ))}
+      </section>
+
+      <section className="two-column">
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Market movers</div>
+              <h2>Top gainers</h2>
+            </div>
+          </div>
+          <div className="movers-list">
+            {topGainers.map((stock) => (
+              <button key={stock.symbol} className="mover-card" onClick={() => refresh(stock.symbol)}>
+                <strong>{stock.symbol}</strong>
+                <span>{stock.company}</span>
+                <small className="positive">{formatPercent(stock.changePercent)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Risk watch</div>
+              <h2>Top losers</h2>
+            </div>
+          </div>
+          <div className="movers-list">
+            {topLosers.map((stock) => (
+              <button key={stock.symbol} className="mover-card" onClick={() => refresh(stock.symbol)}>
+                <strong>{stock.symbol}</strong>
+                <span>{stock.company}</span>
+                <small className="negative">{formatPercent(stock.changePercent)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="two-column">
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Sector pulse</div>
+              <h2>Leading sectors</h2>
+            </div>
+          </div>
+          <div className="sector-grid">
+            {sectorLeaders.map((sector) => (
+              <div key={sector.sector} className="sector-card">
+                <strong>{sector.sector}</strong>
+                <span className={sector.avgChange >= 0 ? "positive" : "negative"}>
+                  {formatPercent(sector.avgChange)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel terminal-panel dashboard-gif-card">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Market motion</div>
+              <h2>Live terminal atmosphere</h2>
+            </div>
+          </div>
+          <div className="dashboard-gif-frame">
+            <img src="/kairo-hero.gif" alt="KAIRO market motion" />
+          </div>
+          <p className="muted-copy">
+            KAIRO now blends live data, signal boards, watchlists, movers, sectors, and richer visual context into a more complete market portal.
+          </p>
+        </div>
       </section>
 
       <section className="panel watchlist-strip">
