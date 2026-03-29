@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await findUserByEmail(credentials.email);
-        if (!user?.passwordHash || !user.emailVerifiedAt) {
+        if (!user?.passwordHash) {
           return null;
         }
 

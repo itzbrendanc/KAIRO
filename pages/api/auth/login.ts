@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { sendVerificationEmail } from "@/lib/email";
-import { createVerificationToken, findUserByEmail } from "@/lib/repository";
+import { findUserByEmail } from "@/lib/repository";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -20,17 +19,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!user) {
       return res.status(404).json({ error: "No account found for that email. Create one first." });
-    }
-
-    if (!user.emailVerifiedAt) {
-      const token = await createVerificationToken(user.email);
-      const verification = await sendVerificationEmail(user.email, token.token, req);
-      return res.status(200).json({
-        requiresVerification: true,
-        message: verification.sent
-          ? "Your email is not verified yet. We sent a fresh verification link."
-          : `Email delivery is unavailable right now. Use this verification link instead: ${verification.verifyUrl}`
-      });
     }
 
     return res.status(200).json({ ok: true });

@@ -1,10 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
-import { sendVerificationEmail } from "@/lib/email";
 import {
   createEmailUser,
-  createVerificationToken,
   findUserByEmail,
+  markUserVerified,
   upsertAudienceMember
 } from "@/lib/repository";
 
@@ -41,9 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       marketingOptIn: Boolean(marketingOptIn),
       productUpdatesOptIn: Boolean(productUpdatesOptIn)
     });
-
-    const token = await createVerificationToken(user.email);
-    const verification = await sendVerificationEmail(user.email, token.token, req);
+    const verifiedUser = await markUserVerified(user.email);
+    const verifiedAt = verifiedUser?.emailVerifiedAt ?? new Date();
 
     await upsertAudienceMember({
       email: user.email,
@@ -51,14 +49,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       marketingOptIn: user.marketingOptIn,
       productUpdatesOptIn: user.productUpdatesOptIn,
       source: "email-signup",
-      verifiedAt: null
+      verifiedAt
     });
 
     return res.status(200).json({
       ok: true,
-      message: verification.sent
-        ? "Verification email sent. Open the link in your inbox to activate your account."
-        : `Email delivery is unavailable right now. Use this verification link instead: ${verification.verifyUrl}`
+      message: "Account created successfully. Signing you in now."
     });
   } catch (error) {
     console.error("Signup failed", error);

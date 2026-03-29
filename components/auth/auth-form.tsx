@@ -58,9 +58,22 @@ export function AuthForm({
 
         setMessage(
           (typeof payload.message === "string" ? payload.message : undefined) ??
-            "We sent you a verification email. Open the link in that message, then sign in."
+            "Account created successfully. Signing you in now."
         );
-        setLoading(false);
+
+        const signupLogin = await signIn("credentials", {
+          email,
+          password,
+          redirect: false
+        });
+
+        if (signupLogin?.error) {
+          setMessage("Account created. Sign in with your email and password.");
+          setLoading(false);
+          return;
+        }
+
+        await router.push("/dashboard");
         return;
       }
 
@@ -77,16 +90,6 @@ export function AuthForm({
         return;
       }
 
-      if (loginPayload.requiresVerification) {
-        setMessage(
-          typeof loginPayload.message === "string"
-            ? loginPayload.message
-            : "Check your inbox for a verification link."
-        );
-        setLoading(false);
-        return;
-      }
-
       const result = await signIn("credentials", {
         email,
         password,
@@ -94,7 +97,7 @@ export function AuthForm({
       });
 
       if (result?.error) {
-        setError("Login failed. Make sure your email is verified and your password is correct.");
+        setError("Login failed. Check your email and password and try again.");
         setLoading(false);
         return;
       }
@@ -117,8 +120,8 @@ export function AuthForm({
         <h1>{mode === "login" ? "Sign in to KAIRO" : "Get started with KAIRO"}</h1>
         <p className="muted-copy">
           {mode === "login"
-            ? "Sign in with Google or your verified email and password."
-            : "Create your account, verify your email, and choose whether to receive product and marketing updates."}
+            ? "Sign in with Google or your email and password."
+            : "Create your account and choose whether to receive product and marketing updates."}
         </p>
 
         {showGoogle ? (
