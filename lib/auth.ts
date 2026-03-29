@@ -12,7 +12,9 @@ import {
 } from "@/lib/repository";
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret:
+    process.env.NEXTAUTH_SECRET ??
+    "kairo-fallback-auth-secret-change-this-in-production",
   session: {
     strategy: "jwt"
   },

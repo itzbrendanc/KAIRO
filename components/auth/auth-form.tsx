@@ -19,6 +19,22 @@ export function AuthForm({
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function readJsonSafely(response: Response) {
+    const text = await response.text();
+
+    try {
+      return text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    } catch {
+      return {
+        error: response.ok
+          ? "Unexpected server response."
+          : text.startsWith("<")
+            ? "The server returned an internal error. Check your Vercel auth environment variables and database setup."
+            : text || "Unexpected server response."
+      };
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -32,16 +48,16 @@ export function AuthForm({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, marketingOptIn, productUpdatesOptIn })
         });
-        const payload = await response.json();
+        const payload = await readJsonSafely(response);
 
         if (!response.ok) {
-          setError(payload.error ?? "Unable to continue.");
+          setError(typeof payload.error === "string" ? payload.error : "Unable to continue.");
           setLoading(false);
           return;
         }
 
         setMessage(
-          payload.message ??
+          (typeof payload.message === "string" ? payload.message : undefined) ??
             "We sent you a verification email. Open the link in that message, then sign in."
         );
         setLoading(false);
@@ -53,16 +69,20 @@ export function AuthForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
       });
-      const loginPayload = await loginCheck.json();
+      const loginPayload = await readJsonSafely(loginCheck);
 
       if (!loginCheck.ok) {
-        setError(loginPayload.error ?? "Unable to continue.");
+        setError(typeof loginPayload.error === "string" ? loginPayload.error : "Unable to continue.");
         setLoading(false);
         return;
       }
 
       if (loginPayload.requiresVerification) {
-        setMessage(loginPayload.message ?? "Check your inbox for a verification link.");
+        setMessage(
+          typeof loginPayload.message === "string"
+            ? loginPayload.message
+            : "Check your inbox for a verification link."
+        );
         setLoading(false);
         return;
       }
