@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.DS_Store
+.env
+prisma/dev.db
+dev.db
+*.log
+coverage/
+dist/
+build/
+.vercel/
+/tmp/

@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  email          String          @unique
+  name           String?
+  passwordHash   String?
+  googleId       String?         @unique
+  image          String?
+  premium        Boolean         @default(false)
+  emailVerifiedAt DateTime?
+  marketingOptIn Boolean         @default(true)
+  productUpdatesOptIn Boolean    @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  watchlist      Watchlist[]
+  signals        SavedSignal[]
+  trades         SimulatedTrade[]
+  subscriptions  Subscription[]
+  audienceMember AudienceMember?
+  groupMessages  GroupMessage[]
+}
+
+model Watchlist {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  symbol    String
+  company   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
+}
+
+model SavedSignal {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  symbol      String
+  action      String
+  confidence  Float
+  explanation String
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SimulatedTrade {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  symbol      String
+  side        String
+  quantity    Int
+  price       Float
+  thesis      String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                   Int      @id @default(autoincrement())
+  userId               Int
+  provider             String   @default("stripe")
+  customerId           String?
+  subscriptionId       String?
+  priceId              String?
+  status               String   @default("inactive")
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, userId])
+  @@unique([provider, customerId])
+  @@unique([provider, subscriptionId])
+}
+
+model EmailVerificationToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AudienceMember {
+  id                  Int      @id @default(autoincrement())
+  email               String   @unique
+  userId              Int?     @unique
+  marketingOptIn      Boolean  @default(true)
+  productUpdatesOptIn Boolean  @default(true)
+  status              String   @default("subscribed")
+  source              String   @default("signup")
+  verifiedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  campaignEvents      EmailCampaignEvent[]
+}
+
+model EmailCampaign {
+  id          Int      @id @default(autoincrement())
+  name        String
+  subject     String
+  previewText String?
+  contentHtml String
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  sentAt      DateTime?
+  events      EmailCampaignEvent[]
+}
+
+model EmailCampaignEvent {
+  id               Int            @id @default(autoincrement())
+  campaignId       Int
+  audienceMemberId Int?
+  email            String
+  eventType        String
+  metadata         String?
+  occurredAt       DateTime       @default(now())
+  campaign         EmailCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  audienceMember   AudienceMember? @relation(fields: [audienceMemberId], references: [id], onDelete: SetNull)
+}
+
+model StudyGroup {
+  id          Int            @id @default(autoincrement())
+  slug        String         @unique
+  name        String
+  description String
+  premiumOnly Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  messages    GroupMessage[]
+}
+
+model GroupMessage {
+  id            Int        @id @default(autoincrement())
+  groupId       Int
+  userId        Int?
+  authorEmail   String
+  authorName    String
+  content       String
+  symbol        String?
+  sharedSymbols String?
+  createdAt     DateTime   @default(now())
+  group         StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,413 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Title,
+  Tooltip
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import { addToWatchlist, getDashboard, getSignals, getStocks, getWatchlist, removeFromWatchlist } from "@/lib/api-client";
+import { KairoLogo } from "@/components/branding/kairo-logo";
+import type { NewsItem, SignalResult, StockQuote } from "@/lib/market-data";
+import { formatCurrency, formatPercent } from "@/lib/format";
+import { StatCard } from "@/components/ui/stat-card";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+
+type DashboardPayload = {
+  quote: StockQuote;
+  index: { index: string; value: number; dayChange: number };
+  signal: SignalResult;
+  news: NewsItem[];
+};
+
+export function Dashboard({
+  initialData,
+  initialBoard,
+  initialWatchlist,
+  initialSignals,
+  premium
+}: {
+  initialData: DashboardPayload;
+  initialBoard: StockQuote[];
+  initialWatchlist: Array<{ id: number; symbol: string; company: string }>;
+  initialSignals: SignalResult[];
+  premium: boolean;
+}) {
+  const [data, setData] = useState(initialData);
+  const [board, setBoard] = useState(initialBoard);
+  const [loading, setLoading] = useState(false);
+  const [symbol, setSymbol] = useState(initialData.quote.symbol);
+  const [error, setError] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState(initialWatchlist);
+  const [watchSymbol, setWatchSymbol] = useState("");
+  const [watchlistBusy, setWatchlistBusy] = useState(false);
+  const [signalCards, setSignalCards] = useState(initialSignals);
+  const [lastBoardRefresh, setLastBoardRefresh] = useState(initialBoard[0]?.fetchedAt ?? initialData.quote.fetchedAt);
+
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      try {
+        const [dashboard, stocks, watchlistPayload, signalsPayload] = await Promise.all([
+          getDashboard(symbol),
+          getStocks(),
+          getWatchlist(),
+          getSignals()
+        ]);
+        setData(dashboard);
+        setBoard(stocks.stocks);
+        setWatchlist(watchlistPayload.items);
+        setSignalCards(signalsPayload.signals);
+        setLastBoardRefresh(stocks.stocks[0]?.fetchedAt ?? new Date().toISOString());
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : "Refresh failed.");
+      }
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [symbol]);
+
+  async function refresh(nextSymbol?: string) {
+    const activeSymbol = nextSymbol ?? symbol;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [dashboard, stocks, signalsPayload] = await Promise.all([getDashboard(activeSymbol), getStocks(), getSignals()]);
+      setData(dashboard);
+      setBoard(stocks.stocks);
+      setSymbol(activeSymbol);
+      setSignalCards(signalsPayload.signals);
+      setLastBoardRefresh(stocks.stocks[0]?.fetchedAt ?? new Date().toISOString());
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveWatchlistSymbol() {
+    if (!watchSymbol) return;
+    setWatchlistBusy(true);
+    setError(null);
+
+    try {
+      const payload = await addToWatchlist(watchSymbol);
+      setWatchlist(payload.items);
+      setWatchSymbol("");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to update watchlist.");
+    } finally {
+      setWatchlistBusy(false);
+    }
+  }
+
+  async function deleteWatchlistSymbol(nextSymbol: string) {
+    setWatchlistBusy(true);
+    setError(null);
+
+    try {
+      const payload = await removeFromWatchlist(nextSymbol);
+      setWatchlist(payload.items);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to update watchlist.");
+    } finally {
+      setWatchlistBusy(false);
+    }
+  }
+
+  const chartData = useMemo(
+    () => ({
+      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Today"],
+      datasets: [
+        {
+          label: `${data.quote.symbol} price`,
+          data: data.quote.history,
+          borderColor: "#69b8ff",
+          backgroundColor: "rgba(105, 184, 255, 0.18)",
+          fill: true,
+          tension: 0.32
+        }
+      ]
+    }),
+    [data.quote.history, data.quote.symbol]
+  );
+
+  const visibleSignalCards = premium ? signalCards.slice(0, 6) : signalCards.slice(0, 2);
+  const visibleHistory = premium ? data.quote.history : data.quote.history.slice(-4);
+  const chartLabels = premium ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Today"] : ["Thu", "Fri", "Mon", "Today"];
+  const primaryExplanation = premium
+    ? data.signal.explanation
+    : "Upgrade to KAIRO Premium to unlock the full AI explanation, historical trend readout, and expanded signal coverage.";
+
+  return (
+    <div className="stack">
+      <section className="hero panel terminal-panel">
+        <div>
+          <KairoLogo size="sm" />
+          <div className="eyebrow">AI investing workspace</div>
+          <h1>KAIRO Dashboard</h1>
+          <p className="hero-copy">
+            Track live market moves, see AI-generated buy or sell signals, and read headline summaries without leaving your KAIRO workspace.
+          </p>
+          <div className="mini-meta">Board refreshes every 15 seconds. Latest update: {new Date(lastBoardRefresh).toLocaleTimeString()}</div>
+        </div>
+        <div className="hero-controls">
+          <input
+            className="text-input"
+            value={symbol}
+            onChange={(event) => setSymbol(event.target.value.toUpperCase())}
+            placeholder="AAPL"
+          />
+          <button className="primary-button" onClick={() => refresh()}>
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+      </section>
+
+      {error ? <div className="error-banner">{error}</div> : null}
+
+      <section className="grid-3">
+        <StatCard label={`${data.quote.symbol} Price`} value={formatCurrency(data.quote.price)} helper={formatPercent(data.quote.changePercent)} />
+        <StatCard label="S&P 500" value={data.index.value.toLocaleString()} helper={formatPercent(data.index.dayChange)} />
+        <StatCard
+          label="AI Signal"
+          value={data.signal.recommendation}
+          helper={premium ? `${Math.round(data.signal.confidence * 100)}% confidence` : "Premium unlocks full confidence"}
+        />
+      </section>
+
+      <section className="panel watchlist-strip">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">Quick access</div>
+            <h2>Your watchlist</h2>
+          </div>
+        </div>
+        <div className="watchlist-pills">
+          {watchlist.map((item) => (
+            <button key={item.id} className="watch-pill" onClick={() => refresh(item.symbol)}>
+              <strong>{item.symbol}</strong>
+              <span>{item.company}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel premium-strip">
+        <div>
+          <div className="eyebrow">{premium ? "KAIRO Premium active" : "Upgrade available"}</div>
+          <h2>{premium ? "Full analysis is unlocked" : "Unlock deeper market intelligence"}</h2>
+          <p className="muted-copy">
+            {premium
+              ? "You have access to more signals, historical trend depth, and the full AI reasoning layer across KAIRO."
+              : "Premium adds more signals, full historical trend context, and complete AI analysis across your tracked names."}
+          </p>
+        </div>
+        {!premium ? (
+          <a className="primary-button link-button" href="/subscription">
+            Upgrade to Premium
+          </a>
+        ) : null}
+      </section>
+
+      <section className="dashboard-grid">
+        <div className="panel chart-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Historical chart</div>
+              <h2>{data.quote.company}</h2>
+            </div>
+            {!premium ? <span className="pill">Premium trend depth locked</span> : null}
+          </div>
+          {!premium ? <p className="muted-copy">Free mode shows a compact trend preview. Premium unlocks the full multi-session historical view.</p> : null}
+          <Line
+            data={{
+              ...chartData,
+              labels: chartLabels,
+              datasets: [
+                {
+                  ...chartData.datasets[0],
+                  data: visibleHistory
+                }
+              ]
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: {
+                  labels: {
+                    color: "#d9ecff"
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: "#8ea8c7" },
+                  grid: { color: "rgba(255,255,255,0.06)" }
+                },
+                y: {
+                  ticks: { color: "#8ea8c7" },
+                  grid: { color: "rgba(255,255,255,0.06)" }
+                }
+              }
+            }}
+          />
+        </div>
+
+        <div className="stack compact-stack">
+          <div className="panel signal-card signal-card-main">
+            <div className="eyebrow">AI trade signal</div>
+            <div className="signal-line">
+              <span>{data.quote.symbol}</span>
+              <span>{formatCurrency(data.quote.price)}</span>
+              <span className={`signal-badge signal-${data.signal.recommendation.toLowerCase()}`}>
+                {data.signal.recommendation}
+              </span>
+            </div>
+            <p className="muted-copy">
+              <strong>Reason:</strong> {primaryExplanation}
+            </p>
+            <div className="mini-meta">
+              {premium ? `Confidence: ${Math.round(data.signal.confidence * 100)}%` : "Confidence score available on Premium"}
+            </div>
+            <div className="signal-metrics">
+              <span>{data.signal.reasonSummary}</span>
+              {premium ? <span>RSI {data.signal.rsi}</span> : null}
+              {premium ? <span>MA(5) {data.signal.maShort}</span> : null}
+              {premium ? <span>MA(14) {data.signal.maLong}</span> : null}
+            </div>
+          </div>
+
+          <div className="panel watchlist-panel">
+            <div className="section-header">
+              <div>
+                <div className="eyebrow">Favorites</div>
+                <h2>Watchlist</h2>
+              </div>
+            </div>
+            <div className="watchlist-form">
+              <input
+                className="text-input"
+                value={watchSymbol}
+                onChange={(event) => setWatchSymbol(event.target.value.toUpperCase())}
+                placeholder="Add symbol"
+              />
+              <button className="primary-button" disabled={watchlistBusy} onClick={saveWatchlistSymbol}>
+                {watchlistBusy ? "Saving..." : "Add"}
+              </button>
+            </div>
+            <div className="watchlist-list">
+              {watchlist.map((item) => (
+                <div key={item.id} className="watchlist-item">
+                  <button className="watchlist-symbol" onClick={() => refresh(item.symbol)}>
+                    <strong>{item.symbol}</strong>
+                    <span>{item.company}</span>
+                  </button>
+                  <button className="ghost-button watchlist-remove" onClick={() => deleteWatchlistSymbol(item.symbol)}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="two-column">
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Market board</div>
+              <h2>S&amp;P 500 board</h2>
+            </div>
+          </div>
+          <div className="table">
+            <div className="table-row table-head">
+              <span>Symbol</span>
+              <span>Company</span>
+              <span>Price</span>
+              <span>Change</span>
+              <span>Feed</span>
+            </div>
+            {board.map((stock) => (
+              <button key={stock.symbol} className="table-row table-action" onClick={() => refresh(stock.symbol)}>
+                <span>{stock.symbol}</span>
+                <span>{stock.company}</span>
+                <span>{formatCurrency(stock.price)}</span>
+                <span className={stock.changePercent >= 0 ? "positive" : "negative"}>
+                  {formatPercent(stock.changePercent)}
+                </span>
+                <span className="mini-meta">{stock.source}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">News feed</div>
+              <h2>Recent headlines</h2>
+            </div>
+          </div>
+          <div className="news-list">
+            {data.news.map((item) => (
+              <a key={`${item.title}-${item.source}`} href={item.url} className="news-card" target="_blank" rel="noreferrer">
+                <div className="news-headline-row">
+                  <strong>{item.title}</strong>
+                  <span className={`news-sentiment news-${item.sentiment}`}>{item.sentiment}</span>
+                </div>
+                <span>{item.summary}</span>
+                <small>
+                  {item.source} • {new Date(item.publishedAt).toLocaleString()}
+                </small>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel terminal-panel">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">Signal cards</div>
+            <h2>Quick trade ideas</h2>
+          </div>
+        </div>
+        <div className="card-grid signal-grid">
+          {visibleSignalCards.map((signal) => {
+            const stock = board.find((item) => item.symbol === signal.symbol);
+            const price = stock?.price ?? data.quote.price;
+
+            return (
+              <div key={signal.symbol} className="panel signal-card signal-card-mini">
+                <div className="signal-line">
+                  <span>{signal.symbol}</span>
+                  <span>{formatCurrency(price)}</span>
+                  <span className={`signal-badge signal-${signal.recommendation.toLowerCase()}`}>{signal.recommendation}</span>
+                </div>
+                <p className="muted-copy">
+                  <strong>Reason:</strong> {premium ? signal.explanation : "Upgrade to KAIRO Premium to read the full AI reasoning for this setup."}
+                </p>
+                <div className="signal-metrics">
+                  <span>{signal.reasonSummary}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!premium ? (
+          <div className="premium-note">
+            Free accounts see 2 signal previews. Upgrade to Premium to unlock the full signal board and expanded analysis.
+          </div>
+        ) : null}
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,107 @@
+# KAIRO
+
+KAIRO is a full-stack Next.js investment dashboard with Prisma schema support, NextAuth-powered Google and email authentication, verified email signup, live-style stock APIs, news, AI signals, Stripe subscriptions, and email marketing tools.
+
+## Folder structure
+
+```text
+components/
+  auth/
+  dashboard/
+  layout/
+  ui/
+data/
+lib/
+pages/
+  api/
+  dashboard/
+prisma/
+styles/
+types/
+```
+
+## Included
+
+- Next.js `pages/` routing
+- Reusable UI and dashboard components
+- Prisma schema for users, watchlists, saved signals, simulated trades, subscriptions, audience members, campaigns, and email events
+- Google login and verified email/password login
+- Audience tracking, update subscriptions, campaign sending, and email event logging
+- API routes for:
+  - `/api/dashboard`
+  - `/api/stocks`
+  - `/api/news`
+  - `/api/signals`
+  - `/api/auth/login`
+  - `/api/auth/signup`
+  - `/api/auth/verify`
+  - `/api/auth/[...nextauth]`
+  - `/api/marketing/subscribe`
+  - `/api/marketing/preferences`
+  - `/api/marketing/campaigns`
+  - `/api/stripe/checkout`
+  - `/api/stripe/portal`
+  - `/api/stripe/webhook`
+- A working dashboard page at `/dashboard`
+- Premium audience page at `/audience`
+- Subscription management page at `/subscription`
+- Local fallback market/news/signal data when API keys are not set
+- Live stock quotes from Finnhub or Alpha Vantage when those API keys are configured
+- Live company news from Finnhub or NewsAPI with headline-level sentiment tags
+- Persistent KAIRO study groups and collaboration messages backed by Prisma
+
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Copy the environment file:
+
+```bash
+cp .env.example .env
+```
+
+3. Add your auth and billing configuration to `.env`:
+
+```env
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="replace-with-a-long-random-secret"
+APP_URL="http://localhost:3000"
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_PREMIUM_PRICE_ID="price_..."
+```
+
+4. Run Prisma migrations:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+5. Start the app:
+
+```bash
+npm run dev
+```
+
+6. Open:
+
+```text
+http://localhost:3000
+```
+
+## Notes
+
+- The app is fully runnable without external API keys because stock quotes, news, and AI signals fall back to realistic local mock data.
+- Email/password signup sends a verification link before credentials login is allowed.
+- Google login is available when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured.
+- Configure `SMTP_*` values in `.env` to send real verification and campaign emails. Without SMTP, the app still works locally and returns verification links in the UI for development.
+- Users can opt into product updates and marketing emails at signup, and premium users can send campaigns from `/audience`.
+- Premium access is controlled by Stripe subscription status. The checkout route creates a Stripe Checkout session and the webhook updates `User.premium` plus the local `Subscription` record after Stripe events arrive.
+- For local Stripe webhook testing, run the Stripe CLI and forward events to `/api/stripe/webhook`.
+- To enable live stock pricing, add `FINNHUB_API_KEY` or `ALPHA_VANTAGE_API_KEY` to `.env`. KAIRO falls back to mock prices when neither provider is configured.
+- To enable live market news, add `FINNHUB_API_KEY` or `NEWS_API_KEY` to `.env`. KAIRO tags each headline as positive, neutral, or negative using a lightweight sentiment pass.
+- SQLite works well for local development. For a Vercel deployment, switch `DATABASE_URL` to a hosted Postgres database because SQLite files are not a durable production database on Vercel.
