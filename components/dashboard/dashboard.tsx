@@ -146,6 +146,7 @@ export function Dashboard({
     : "Upgrade to KAIRO Premium to unlock the full AI explanation, historical trend readout, and expanded signal coverage.";
   const liveBoardCount = board.filter((item) => item.isLive).length;
   const liveNewsCount = data.news.filter((item) => item.isLive).length;
+  const visibleNews = data.news.filter((item) => item.isLive);
 
   return (
     <div className="stack">
@@ -385,18 +386,24 @@ export function Dashboard({
             </div>
           </div>
           <div className="news-list">
-            {data.news.map((item) => (
-              <a key={`${item.title}-${item.source}`} href={item.url} className="news-card" target="_blank" rel="noreferrer">
-                <div className="news-headline-row">
-                  <strong>{item.title}</strong>
-                  <span className={`news-sentiment news-${item.sentiment}`}>{item.sentiment}</span>
-                </div>
-                <span>{item.summary}</span>
-                <small>
-                  {item.isLive ? item.source : "Demo Feed"} • {new Date(item.publishedAt).toLocaleString()}
-                </small>
-              </a>
-            ))}
+            {visibleNews.length > 0 ? (
+              visibleNews.map((item) => (
+                <a key={`${item.title}-${item.source}`} href={item.url} className="news-card" target="_blank" rel="noreferrer">
+                  <div className="news-headline-row">
+                    <strong>{item.title}</strong>
+                    <span className={`news-sentiment news-${item.sentiment}`}>{item.sentiment}</span>
+                  </div>
+                  <span>{item.summary}</span>
+                  <small>
+                    {item.source} • {new Date(item.publishedAt).toLocaleString()}
+                  </small>
+                </a>
+              ))
+            ) : (
+              <div className="muted-copy">
+                No live headlines are available for this symbol right now. Add `FINNHUB_API_KEY` or `NEWS_API_KEY`, or try another stock.
+              </div>
+            )}
           </div>
         </div>
       </section>
