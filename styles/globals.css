@@ -97,6 +97,53 @@ textarea {
   gap: 12px;
 }
 
+.symbol-search {
+  position: relative;
+  width: min(280px, 100%);
+}
+
+.symbol-search-input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.symbol-search-results {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(8, 10, 14, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38);
+}
+
+.symbol-search-result {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.symbol-search-result span,
+.symbol-search-result small {
+  color: var(--muted);
+}
+
 .user-email {
   color: var(--muted);
   font-size: 0.92rem;
@@ -833,6 +880,22 @@ textarea {
   filter: grayscale(0.15) contrast(0.95) brightness(0.78);
 }
 
+.movers-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mover-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-align: left;
+}
+
 .signal-card {
   display: grid;
   gap: 12px;
@@ -1173,6 +1236,10 @@ textarea {
   .nav,
   .topbar-actions {
     flex-wrap: wrap;
+  }
+
+  .symbol-search {
+    width: 100%;
   }
 
   .watchlist-form,

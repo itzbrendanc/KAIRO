@@ -2,9 +2,11 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import type { ReactNode } from "react";
 import { KairoLogo } from "@/components/branding/kairo-logo";
+import { SymbolSearch } from "@/components/layout/symbol-search";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/markets", label: "Markets" },
   { href: "/signals", label: "Signals" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/community", label: "Community" },
@@ -39,6 +41,7 @@ export function AppShell({
           ))}
         </nav>
         <div className="topbar-actions">
+          <SymbolSearch />
           {user ? (
             <>
               <span className={`pill ${user.premium ? "pill-premium" : ""}`}>
