@@ -21,7 +21,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 type DashboardPayload = {
   quote: StockQuote;
-  index: { index: string; value: number; dayChange: number };
+  index: { index: string; value: number; dayChange: number; isLive?: boolean };
   signal: SignalResult;
   news: NewsItem[];
 };
@@ -123,7 +123,7 @@ export function Dashboard({
 
   const chartData = useMemo(
     () => ({
-      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Today"],
+      labels: data.quote.historyLabels,
       datasets: [
         {
           label: `${data.quote.symbol} price`,
@@ -135,15 +135,17 @@ export function Dashboard({
         }
       ]
     }),
-    [data.quote.history, data.quote.symbol]
+    [data.quote.history, data.quote.historyLabels, data.quote.symbol]
   );
 
   const visibleSignalCards = premium ? signalCards.slice(0, 6) : signalCards.slice(0, 2);
   const visibleHistory = premium ? data.quote.history : data.quote.history.slice(-4);
-  const chartLabels = premium ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Today"] : ["Thu", "Fri", "Mon", "Today"];
+  const chartLabels = premium ? data.quote.historyLabels : data.quote.historyLabels.slice(-4);
   const primaryExplanation = premium
     ? data.signal.explanation
     : "Upgrade to KAIRO Premium to unlock the full AI explanation, historical trend readout, and expanded signal coverage.";
+  const liveBoardCount = board.filter((item) => item.isLive).length;
+  const liveNewsCount = data.news.filter((item) => item.isLive).length;
 
   return (
     <div className="stack">
@@ -171,10 +173,28 @@ export function Dashboard({
       </section>
 
       {error ? <div className="error-banner">{error}</div> : null}
+      {!data.quote.isLive ? (
+        <div className="error-banner">
+          Live stock data is not active for this deployment yet. Add a valid `FINNHUB_API_KEY`, `ALPHA_VANTAGE_API_KEY`, or `INFOWAY_API_KEY` in Vercel to replace demo prices.
+        </div>
+      ) : null}
+      {data.quote.isLive && liveNewsCount === 0 ? (
+        <div className="success-banner">
+          Live prices are active. Add `FINNHUB_API_KEY` or `NEWS_API_KEY` as well if you want live market headlines instead of demo news.
+        </div>
+      ) : null}
 
       <section className="grid-3">
-        <StatCard label={`${data.quote.symbol} Price`} value={formatCurrency(data.quote.price)} helper={formatPercent(data.quote.changePercent)} />
-        <StatCard label="S&P 500" value={data.index.value.toLocaleString()} helper={formatPercent(data.index.dayChange)} />
+        <StatCard
+          label={`${data.quote.symbol} Price`}
+          value={formatCurrency(data.quote.price)}
+          helper={`${formatPercent(data.quote.changePercent)} · ${data.quote.source}`}
+        />
+        <StatCard
+          label="S&P 500"
+          value={data.index.value.toLocaleString()}
+          helper={`${formatPercent(data.index.dayChange)} · ${data.index.isLive ? "Live" : "Demo"}`}
+        />
         <StatCard
           label="AI Signal"
           value={data.signal.recommendation}
@@ -273,6 +293,11 @@ export function Dashboard({
             <p className="muted-copy">
               <strong>Reason:</strong> {primaryExplanation}
             </p>
+            {!data.quote.isLive ? (
+              <p className="muted-copy">
+                This signal is currently based on demo quote data. Configure a live quote provider to make the analysis reflect the real market.
+              </p>
+            ) : null}
             <div className="mini-meta">
               {premium ? `Confidence: ${Math.round(data.signal.confidence * 100)}%` : "Confidence score available on Premium"}
             </div>
@@ -343,9 +368,12 @@ export function Dashboard({
                 <span className={stock.changePercent >= 0 ? "positive" : "negative"}>
                   {formatPercent(stock.changePercent)}
                 </span>
-                <span className="mini-meta">{stock.source}</span>
+                <span className="mini-meta">{stock.isLive ? stock.source : "Demo"}</span>
               </button>
             ))}
+          </div>
+          <div className="mini-meta">
+            {liveBoardCount} of {board.length} board quotes are live.
           </div>
         </div>
 
@@ -365,7 +393,7 @@ export function Dashboard({
                 </div>
                 <span>{item.summary}</span>
                 <small>
-                  {item.source} • {new Date(item.publishedAt).toLocaleString()}
+                  {item.isLive ? item.source : "Demo Feed"} • {new Date(item.publishedAt).toLocaleString()}
                 </small>
               </a>
             ))}

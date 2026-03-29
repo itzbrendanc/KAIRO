@@ -7,8 +7,10 @@ export type StockQuote = {
   price: number;
   changePercent: number;
   history: number[];
+  historyLabels: string[];
   source: string;
   fetchedAt: string;
+  isLive: boolean;
 };
 
 export type NewsItem = {
@@ -18,6 +20,7 @@ export type NewsItem = {
   summary: string;
   sentiment: "positive" | "neutral" | "negative";
   publishedAt: string;
+  isLive: boolean;
 };
 
 export type SignalResult = {
@@ -34,6 +37,66 @@ export type SignalResult = {
   momentum: "strong" | "neutral" | "weak";
 };
 
+type QuoteOptions = {
+  includeHistory?: boolean;
+};
+
+type CacheEntry<T> = {
+  value: T;
+  expiresAt: number;
+};
+
+declare global {
+  var __kairoQuoteCache: Map<string, CacheEntry<StockQuote>> | undefined;
+  var __kairoNewsCache: Map<string, CacheEntry<NewsItem[]>> | undefined;
+  var __kairoSignalCache: Map<string, CacheEntry<SignalResult>> | undefined;
+  var __kairoBoardCache: CacheEntry<StockQuote[]> | undefined;
+}
+
+const QUOTE_TTL_MS = 15_000;
+const BOARD_TTL_MS = 20_000;
+const NEWS_TTL_MS = 120_000;
+const SIGNAL_TTL_MS = 30_000;
+const ALLOW_DEMO_FALLBACK =
+  process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_MARKET_DATA === "true";
+
+function getQuoteCache() {
+  if (!globalThis.__kairoQuoteCache) {
+    globalThis.__kairoQuoteCache = new Map();
+  }
+
+  return globalThis.__kairoQuoteCache;
+}
+
+function getNewsCache() {
+  if (!globalThis.__kairoNewsCache) {
+    globalThis.__kairoNewsCache = new Map();
+  }
+
+  return globalThis.__kairoNewsCache;
+}
+
+function getSignalCache() {
+  if (!globalThis.__kairoSignalCache) {
+    globalThis.__kairoSignalCache = new Map();
+  }
+
+  return globalThis.__kairoSignalCache;
+}
+
+function readCache<T>(entry: CacheEntry<T> | undefined) {
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) return null;
+  return entry.value;
+}
+
+function writeCache<T>(cache: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number) {
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + ttlMs
+  });
+}
+
 function randomFromSeed(seed: string, step: number) {
   return seed.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0) + step * 17;
 }
@@ -45,37 +108,113 @@ function mockHistory(symbol: string) {
   );
 }
 
+function buildHistoryLabels(length: number) {
+  return Array.from({ length }, (_, index) =>
+    index === length - 1 ? "Now" : `-${length - index - 1}`
+  );
+}
+
 function normalizeSymbolForProvider(symbol: string) {
   return symbol.toUpperCase().replace(".", "-");
 }
 
 function buildFallbackQuote(symbol: string) {
-  const company = STOCKS.find((item) => item.symbol === symbol)?.company ?? symbol;
-  const sector = STOCKS.find((item) => item.symbol === symbol)?.sector ?? "Market";
+  const stock = STOCKS.find((item) => item.symbol === symbol);
   const history = mockHistory(symbol);
   const last = history[history.length - 1];
   const previous = history[history.length - 2];
 
   return {
     symbol,
-    company,
-    sector,
+    company: stock?.company ?? symbol,
+    sector: stock?.sector ?? "Market",
     price: last,
     changePercent: Number((((last - previous) / previous) * 100).toFixed(2)),
     history,
-    source: "Mock Feed",
-    fetchedAt: new Date().toISOString()
+    historyLabels: buildHistoryLabels(history.length),
+    source: "Demo Feed",
+    fetchedAt: new Date().toISOString(),
+    isLive: false
   } satisfies StockQuote;
 }
 
-async function fetchFinnhubQuote(symbol: string, fallback: StockQuote) {
+function providerConfigured() {
+  return Boolean(
+    process.env.FINNHUB_API_KEY ||
+      process.env.ALPHA_VANTAGE_API_KEY ||
+      process.env.INFOWAY_API_KEY
+  );
+}
+
+async function fetchFinnhubHistory(symbol: string, fallback: StockQuote) {
+  if (!process.env.FINNHUB_API_KEY) {
+    return {
+      history: fallback.history,
+      historyLabels: fallback.historyLabels,
+      fetchedAt: fallback.fetchedAt
+    };
+  }
+
+  try {
+    const providerSymbol = normalizeSymbolForProvider(symbol);
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - 60 * 60 * 24;
+    const response = await fetch(
+      `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(providerSymbol)}&resolution=60&from=${from}&to=${now}&token=${process.env.FINNHUB_API_KEY}`,
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return {
+        history: fallback.history,
+        historyLabels: fallback.historyLabels,
+        fetchedAt: fallback.fetchedAt
+      };
+    }
+
+    const data = (await response.json()) as {
+      c?: number[];
+      t?: number[];
+      s?: string;
+    };
+
+    if (!data.c?.length || data.s !== "ok") {
+      return {
+        history: fallback.history,
+        historyLabels: fallback.historyLabels,
+        fetchedAt: fallback.fetchedAt
+      };
+    }
+
+    const closes = data.c.slice(-21).map((value) => Number(value.toFixed(2)));
+    const timestamps = data.t?.slice(-closes.length) ?? [];
+    const labels = timestamps.map((value) =>
+      new Date(value * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    );
+
+    return {
+      history: closes,
+      historyLabels: labels.length === closes.length ? labels : buildHistoryLabels(closes.length),
+      fetchedAt: timestamps.length
+        ? new Date(timestamps[timestamps.length - 1] * 1000).toISOString()
+        : new Date().toISOString()
+    };
+  } catch {
+    return {
+      history: fallback.history,
+      historyLabels: fallback.historyLabels,
+      fetchedAt: fallback.fetchedAt
+    };
+  }
+}
+
+async function fetchFinnhubQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
   if (!process.env.FINNHUB_API_KEY) {
     return null;
   }
 
-  const providerSymbol = normalizeSymbolForProvider(symbol);
-
   try {
+    const providerSymbol = normalizeSymbolForProvider(symbol);
     const response = await fetch(
       `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(providerSymbol)}&token=${process.env.FINNHUB_API_KEY}`,
       { headers: { Accept: "application/json" }, cache: "no-store" }
@@ -95,35 +234,47 @@ async function fetchFinnhubQuote(symbol: string, fallback: StockQuote) {
       return null;
     }
 
+    const historyData = includeHistory
+      ? await fetchFinnhubHistory(symbol, fallback)
+      : {
+          history: fallback.history,
+          historyLabels: fallback.historyLabels,
+          fetchedAt: data.t ? new Date(data.t * 1000).toISOString() : new Date().toISOString()
+        };
+
     return {
       ...fallback,
       price: Number(data.c.toFixed(2)),
       changePercent: Number((((data.c - data.pc) / data.pc) * 100).toFixed(2)),
+      history: historyData.history,
+      historyLabels: historyData.historyLabels,
       source: "Finnhub",
-      fetchedAt: data.t ? new Date(data.t * 1000).toISOString() : new Date().toISOString()
+      fetchedAt: historyData.fetchedAt,
+      isLive: true
     } satisfies StockQuote;
   } catch {
     return null;
   }
 }
 
-async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote) {
+async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
   if (!process.env.ALPHA_VANTAGE_API_KEY) {
     return null;
   }
 
-  const providerSymbol = normalizeSymbolForProvider(symbol);
-
   try {
+    const providerSymbol = normalizeSymbolForProvider(symbol);
     const [quoteResponse, intradayResponse] = await Promise.all([
       fetch(
         `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(providerSymbol)}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
         { headers: { Accept: "application/json" }, cache: "no-store" }
       ),
-      fetch(
-        `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(providerSymbol)}&interval=5min&outputsize=compact&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
-        { headers: { Accept: "application/json" }, cache: "no-store" }
-      )
+      includeHistory
+        ? fetch(
+            `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(providerSymbol)}&interval=5min&outputsize=compact&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`,
+            { headers: { Accept: "application/json" }, cache: "no-store" }
+          )
+        : Promise.resolve(null)
     ]);
 
     if (!quoteResponse.ok) {
@@ -132,17 +283,20 @@ async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote) {
 
     const quoteData = (await quoteResponse.json()) as {
       ["Global Quote"]?: Record<string, string>;
+      Note?: string;
+      Information?: string;
     };
     const globalQuote = quoteData["Global Quote"];
 
-    if (!globalQuote?.["05. price"] || !globalQuote["09. change"]) {
+    if (!globalQuote?.["05. price"] || !globalQuote["10. change percent"]) {
       return null;
     }
 
     let history = fallback.history;
+    let historyLabels = fallback.historyLabels;
     let fetchedAt = new Date().toISOString();
 
-    if (intradayResponse.ok) {
+    if (intradayResponse?.ok) {
       const intradayData = (await intradayResponse.json()) as {
         ["Time Series (5min)"]?: Record<string, { ["4. close"]?: string }>;
       };
@@ -154,7 +308,12 @@ async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote) {
           .slice(-21);
 
         if (entries.length > 3) {
-          history = entries.map(([, candle]) => Number(Number(candle["4. close"] ?? fallback.price).toFixed(2)));
+          history = entries.map(([, candle]) =>
+            Number(Number(candle["4. close"] ?? fallback.price).toFixed(2))
+          );
+          historyLabels = entries.map(([timestamp]) =>
+            new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+          );
           fetchedAt = new Date(entries[entries.length - 1][0]).toISOString();
         }
       }
@@ -163,10 +322,48 @@ async function fetchAlphaVantageQuote(symbol: string, fallback: StockQuote) {
     return {
       ...fallback,
       price: Number(Number(globalQuote["05. price"]).toFixed(2)),
-      changePercent: Number(globalQuote["10. change percent"]?.replace("%", "") ?? fallback.changePercent),
+      changePercent: Number(globalQuote["10. change percent"].replace("%", "")),
       history,
+      historyLabels,
       source: "Alpha Vantage",
-      fetchedAt
+      fetchedAt,
+      isLive: true
+    } satisfies StockQuote;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchInfowayQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
+  if (!process.env.INFOWAY_API_KEY) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.infoway.io/stocks/${encodeURIComponent(symbol)}/quote?apikey=${process.env.INFOWAY_API_KEY}`,
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    const price = Number(data.price ?? NaN);
+    if (!Number.isFinite(price)) {
+      return null;
+    }
+
+    return {
+      ...fallback,
+      price: Number(price.toFixed(2)),
+      changePercent: Number(Number(data.changePercent ?? fallback.changePercent).toFixed(2)),
+      history: includeHistory ? fallback.history : fallback.history,
+      historyLabels: fallback.historyLabels,
+      source: "Infoway",
+      fetchedAt: new Date().toISOString(),
+      isLive: true
     } satisfies StockQuote;
   } catch {
     return null;
@@ -180,9 +377,7 @@ function movingAverage(values: number[], period: number) {
 
 function calculateRSI(values: number[], period = 14) {
   const slice = values.slice(-(period + 1));
-  if (slice.length < 2) {
-    return 50;
-  }
+  if (slice.length < 2) return 50;
 
   let gains = 0;
   let losses = 0;
@@ -199,30 +394,14 @@ function calculateRSI(values: number[], period = 14) {
 }
 
 function scoreNewsSentiment(news: NewsItem[]) {
-  const positiveWords = [
-    "positive",
-    "optimistic",
-    "growth",
-    "strong",
-    "constructive",
-    "beat",
-    "upward",
-    "durable"
-  ];
-  const negativeWords = [
-    "weak",
-    "negative",
-    "soft",
-    "caution",
-    "risk",
-    "down",
-    "pressure",
-    "fading"
-  ];
+  const liveNews = news.filter((item) => item.isLive);
+  const sourceItems = liveNews.length > 0 ? liveNews : news;
+  const positiveWords = ["positive", "optimistic", "growth", "strong", "constructive", "beat", "upward", "durable"];
+  const negativeWords = ["weak", "negative", "soft", "caution", "risk", "down", "pressure", "fading"];
 
   let score = 0;
 
-  for (const item of news) {
+  for (const item of sourceItems) {
     const text = `${item.title} ${item.summary}`.toLowerCase();
     for (const word of positiveWords) {
       if (text.includes(word)) score += 1;
@@ -243,11 +422,9 @@ function scoreHeadlineSentiment(text: string): NewsItem["sentiment"] {
   const negativeWords = ["miss", "risk", "weak", "pressure", "cut", "drop", "warning", "lawsuit"];
 
   let score = 0;
-
   for (const word of positiveWords) {
     if (normalized.includes(word)) score += 1;
   }
-
   for (const word of negativeWords) {
     if (normalized.includes(word)) score -= 1;
   }
@@ -263,52 +440,40 @@ function determineTrend(price: number, maShort: number, maLong: number) {
   return "sideways" as const;
 }
 
-export async function fetchInfowayPrice(symbol: string) {
+export async function fetchInfowayPrice(symbol: string, options: QuoteOptions = {}) {
+  const includeHistory = options.includeHistory ?? true;
+  const cacheKey = `${symbol}:${includeHistory ? "detail" : "board"}`;
+  const cached = readCache(getQuoteCache().get(cacheKey));
+  if (cached) {
+    return cached;
+  }
+
   const fallback = buildFallbackQuote(symbol);
 
-  const finnhubQuote = await fetchFinnhubQuote(symbol, fallback);
-  if (finnhubQuote) {
-    return finnhubQuote;
-  }
+  const liveQuote =
+    (await fetchFinnhubQuote(symbol, fallback, includeHistory)) ??
+    (await fetchAlphaVantageQuote(symbol, fallback, includeHistory)) ??
+    (await fetchInfowayQuote(symbol, fallback, includeHistory));
 
-  const alphaVantageQuote = await fetchAlphaVantageQuote(symbol, fallback);
-  if (alphaVantageQuote) {
-    return alphaVantageQuote;
-  }
+  const result =
+    liveQuote ??
+    (ALLOW_DEMO_FALLBACK || !providerConfigured()
+      ? {
+          ...fallback,
+          source: providerConfigured() ? "Demo Feed (Provider Failed)" : "Demo Feed (Missing Live API Key)"
+        }
+      : fallback);
 
-  if (!process.env.INFOWAY_API_KEY) {
-    return fallback;
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.infoway.io/stocks/${encodeURIComponent(symbol)}/quote?apikey=${process.env.INFOWAY_API_KEY}`,
-      { headers: { Accept: "application/json" }, cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      return fallback;
-    }
-
-    const data = (await response.json()) as Record<string, unknown>;
-
-    return {
-      ...fallback,
-      price: Number(data.price ?? fallback.price),
-      changePercent: Number(data.changePercent ?? fallback.changePercent),
-      source: "Infoway",
-      fetchedAt: new Date().toISOString()
-    } satisfies StockQuote;
-  } catch {
-    return fallback;
-  }
+  writeCache(getQuoteCache(), cacheKey, result, QUOTE_TTL_MS);
+  return result;
 }
 
 export async function fetchITickIndex(index: string) {
   const fallback = {
     index,
     value: 5260.84,
-    dayChange: 0.48
+    dayChange: 0.48,
+    isLive: false
   };
 
   if (!process.env.ITICK_API_KEY) {
@@ -325,24 +490,128 @@ export async function fetchITickIndex(index: string) {
       return fallback;
     }
 
-    return response.json();
+    const data = (await response.json()) as Record<string, unknown>;
+    return {
+      index: String(data.index ?? index),
+      value: Number(data.value ?? fallback.value),
+      dayChange: Number(data.dayChange ?? fallback.dayChange),
+      isLive: true
+    };
   } catch {
     return fallback;
   }
 }
 
+export async function fetchNews(symbol: string) {
+  const cached = readCache(getNewsCache().get(symbol));
+  if (cached) {
+    return cached;
+  }
+
+  const fallback = [
+    {
+      title: `${symbol} attracts investor attention ahead of the next market catalyst`,
+      url: "#",
+      source: "KAIRO Demo Wire",
+      summary: "Live financial news is not configured yet for this deployment.",
+      sentiment: "neutral",
+      publishedAt: new Date().toISOString(),
+      isLive: false
+    }
+  ] satisfies NewsItem[];
+
+  if (process.env.FINNHUB_API_KEY) {
+    try {
+      const fromDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString().slice(0, 10);
+      const toDate = new Date().toISOString().slice(0, 10);
+      const response = await fetch(
+        `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(normalizeSymbolForProvider(symbol))}&from=${fromDate}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+
+      if (response.ok) {
+        const data = (await response.json()) as Array<Record<string, unknown>>;
+        const items = data
+          .filter((article) => article.headline && article.url)
+          .slice(0, 6)
+          .map((article) => {
+            const title = String(article.headline);
+            const summary = String(article.summary ?? "No summary available.");
+            return {
+              title,
+              url: String(article.url),
+              source: "Finnhub",
+              summary,
+              sentiment: scoreHeadlineSentiment(`${title} ${summary}`),
+              publishedAt: article.datetime
+                ? new Date(Number(article.datetime) * 1000).toISOString()
+                : new Date().toISOString(),
+              isLive: true
+            } satisfies NewsItem;
+          });
+
+        if (items.length > 0) {
+          writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
+          return items;
+        }
+      }
+    } catch {
+      // continue to next provider/fallback
+    }
+  }
+
+  if (process.env.NEWS_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://newsapi.org/v2/everything?q=${encodeURIComponent(symbol)}&language=en&pageSize=6&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`,
+        { headers: { Accept: "application/json" }, cache: "no-store" }
+      );
+
+      if (response.ok) {
+        const data = (await response.json()) as { articles?: Array<Record<string, unknown>> };
+        const items = (data.articles ?? [])
+          .filter((article) => article.title && article.url)
+          .slice(0, 6)
+          .map((article) => ({
+            title: String(article.title),
+            url: String(article.url),
+            source: String((article.source as { name?: string } | undefined)?.name ?? "NewsAPI"),
+            summary: String(article.description ?? "No summary available."),
+            sentiment: scoreHeadlineSentiment(
+              `${String(article.title ?? "")} ${String(article.description ?? "")}`
+            ),
+            publishedAt: String(article.publishedAt ?? new Date().toISOString()),
+            isLive: true
+          })) satisfies NewsItem[];
+
+        if (items.length > 0) {
+          writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
+          return items;
+        }
+      }
+    } catch {
+      // continue to fallback
+    }
+  }
+
+  writeCache(getNewsCache(), symbol, fallback, NEWS_TTL_MS);
+  return fallback;
+}
+
 export async function fetchSteadySignal(symbol: string) {
-  const quote = await fetchInfowayPrice(symbol);
+  const cached = readCache(getSignalCache().get(symbol));
+  if (cached) {
+    return cached;
+  }
+
+  const quote = await fetchInfowayPrice(symbol, { includeHistory: true });
   const news = await fetchNews(symbol);
   const maShort = movingAverage(quote.history, 5);
   const maLong = movingAverage(quote.history, 14);
   const rsi = calculateRSI(quote.history, 14);
   const sentiment = scoreNewsSentiment(news);
   const trend = determineTrend(quote.price, maShort, maLong);
-  const momentum =
-    rsi > 68 ? "weak" :
-    rsi < 35 ? "strong" :
-    "neutral";
+  const momentum = rsi > 68 ? "weak" : rsi < 35 ? "strong" : "neutral";
 
   let score = 0;
   if (trend === "uptrend") score += 2;
@@ -355,19 +624,25 @@ export async function fetchSteadySignal(symbol: string) {
   const recommendation = score >= 2 ? "BUY" : score <= -2 ? "SELL" : "HOLD";
   const confidence = Number(Math.min(0.92, 0.56 + Math.abs(score) * 0.09).toFixed(2));
   const trendText =
-    trend === "uptrend" ? "price remains above both moving averages" :
-    trend === "downtrend" ? "price is trading below its key moving averages" :
-    "price is moving sideways around trend support";
+    trend === "uptrend"
+      ? "price remains above both moving averages"
+      : trend === "downtrend"
+        ? "price is trading below its key moving averages"
+        : "price is moving sideways around trend support";
   const momentumText =
-    rsi > 68 ? "momentum looks stretched and overbought" :
-    rsi < 35 ? "momentum is weak but nearing oversold territory" :
-    "momentum is balanced rather than extreme";
+    rsi > 68
+      ? "momentum looks stretched and overbought"
+      : rsi < 35
+        ? "momentum is weak but nearing oversold territory"
+        : "momentum is balanced rather than extreme";
   const sentimentText =
-    sentiment === "positive" ? "news sentiment is positive" :
-    sentiment === "negative" ? "news sentiment is negative" :
-    "news sentiment is mixed";
+    sentiment === "positive"
+      ? "news sentiment is positive"
+      : sentiment === "negative"
+        ? "news sentiment is negative"
+        : "news sentiment is mixed";
 
-  const fallback = {
+  const result = {
     symbol,
     recommendation,
     confidence,
@@ -386,133 +661,39 @@ export async function fetchSteadySignal(symbol: string) {
     momentum
   } satisfies SignalResult;
 
-  if (!process.env.STEADY_API_KEY) {
-    return fallback;
-  }
-
-  try {
-    const response = await fetch(
-      `https://api.steadyapi.com/signals/${encodeURIComponent(symbol)}?apikey=${process.env.STEADY_API_KEY}`,
-      { headers: { Accept: "application/json" }, cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      return fallback;
-    }
-
-    const data = (await response.json()) as Record<string, unknown>;
-    return {
-      symbol,
-      recommendation: (data.recommendation as SignalResult["recommendation"]) ?? fallback.recommendation,
-      confidence: Number(data.confidence ?? fallback.confidence),
-      explanation: String(data.explanation ?? fallback.explanation),
-      reasonSummary: String(data.reasonSummary ?? fallback.reasonSummary),
-      sentiment: fallback.sentiment,
-      trend: fallback.trend,
-      rsi: fallback.rsi,
-      maShort: fallback.maShort,
-      maLong: fallback.maLong,
-      momentum: fallback.momentum
-    } satisfies SignalResult;
-  } catch {
-    return fallback;
-  }
-}
-
-export async function fetchNews(symbol: string) {
-  const fallback = [
-    {
-      title: `${symbol} attracts investor attention ahead of the next market catalyst`,
-      url: "#",
-      source: "KAIRO Wire",
-      summary: "Sentiment is cautiously optimistic as traders look for confirmation from macro and earnings trends.",
-      sentiment: "positive",
-      publishedAt: new Date().toISOString()
-    },
-    {
-      title: `Analysts debate whether ${symbol} still has room to run`,
-      url: "#",
-      source: "Market Journal",
-      summary: "Analysts remain split between valuation caution and confidence in durable growth.",
-      sentiment: "neutral",
-      publishedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-    },
-    {
-      title: `${symbol} options flow hints at elevated short-term expectations`,
-      url: "#",
-      source: "Flow Desk",
-      summary: "Higher options activity suggests traders expect movement, but conviction is not one-sided.",
-      sentiment: "neutral",
-      publishedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString()
-    }
-  ] satisfies NewsItem[];
-
-  if (process.env.FINNHUB_API_KEY) {
+  if (process.env.STEADY_API_KEY) {
     try {
-      const fromDate = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString().slice(0, 10);
-      const toDate = new Date().toISOString().slice(0, 10);
       const response = await fetch(
-        `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(normalizeSymbolForProvider(symbol))}&from=${fromDate}&to=${toDate}&token=${process.env.FINNHUB_API_KEY}`,
+        `https://api.steadyapi.com/signals/${encodeURIComponent(symbol)}?apikey=${process.env.STEADY_API_KEY}`,
         { headers: { Accept: "application/json" }, cache: "no-store" }
       );
 
       if (response.ok) {
-        const data = (await response.json()) as Array<Record<string, unknown>>;
-        const items = data.slice(0, 6).map((article) => {
-          const title = String(article.headline ?? `${symbol} market update`);
-          const summary = String(article.summary ?? "No summary available.");
-          return {
-            title,
-            url: String(article.url ?? "#"),
-            source: "Finnhub",
-            summary,
-            sentiment: scoreHeadlineSentiment(`${title} ${summary}`),
-            publishedAt: article.datetime
-              ? new Date(Number(article.datetime) * 1000).toISOString()
-              : new Date().toISOString()
-          } satisfies NewsItem;
-        });
+        const data = (await response.json()) as Record<string, unknown>;
+        const liveResult = {
+          ...result,
+          recommendation:
+            (data.recommendation as SignalResult["recommendation"] | undefined) ?? result.recommendation,
+          confidence: Number(data.confidence ?? result.confidence),
+          explanation: String(data.explanation ?? result.explanation),
+          reasonSummary: String(data.reasonSummary ?? result.reasonSummary)
+        } satisfies SignalResult;
 
-        if (items.length > 0) {
-          return items;
-        }
+        writeCache(getSignalCache(), symbol, liveResult, SIGNAL_TTL_MS);
+        return liveResult;
       }
     } catch {
-      return fallback;
+      // use computed signal
     }
   }
 
-  if (!process.env.NEWS_API_KEY) {
-    return fallback;
-  }
-
-  try {
-    const response = await fetch(
-      `https://newsapi.org/v2/everything?q=${encodeURIComponent(symbol)}&apiKey=${process.env.NEWS_API_KEY}`,
-      { headers: { Accept: "application/json" }, cache: "no-store" }
-    );
-
-    if (!response.ok) {
-      return fallback;
-    }
-
-    const data = (await response.json()) as { articles?: Array<Record<string, unknown>> };
-    return (data.articles ?? []).slice(0, 6).map((article) => ({
-      title: String(article.title ?? "Untitled article"),
-      url: String(article.url ?? "#"),
-      source: String((article.source as { name?: string } | undefined)?.name ?? "NewsAPI"),
-      summary: String(article.description ?? "No summary available."),
-      sentiment: scoreHeadlineSentiment(`${String(article.title ?? "")} ${String(article.description ?? "")}`),
-      publishedAt: String(article.publishedAt ?? new Date().toISOString())
-    })) satisfies NewsItem[];
-  } catch {
-    return fallback;
-  }
+  writeCache(getSignalCache(), symbol, result, SIGNAL_TTL_MS);
+  return result;
 }
 
 export async function getDashboardData(symbol = "AAPL") {
   const [quote, index, signal, news] = await Promise.all([
-    fetchInfowayPrice(symbol),
+    fetchInfowayPrice(symbol, { includeHistory: true }),
     fetchITickIndex("SP500"),
     fetchSteadySignal(symbol),
     fetchNews(symbol)
@@ -527,7 +708,21 @@ export async function getDashboardData(symbol = "AAPL") {
 }
 
 export async function getMarketBoard() {
-  return Promise.all(STOCKS.map((stock) => fetchInfowayPrice(stock.symbol)));
+  const cached = readCache(globalThis.__kairoBoardCache);
+  if (cached) {
+    return cached;
+  }
+
+  const stocks = await Promise.all(
+    STOCKS.map((stock) => fetchInfowayPrice(stock.symbol, { includeHistory: false }))
+  );
+
+  globalThis.__kairoBoardCache = {
+    value: stocks,
+    expiresAt: Date.now() + BOARD_TTL_MS
+  };
+
+  return stocks;
 }
 
 export async function getSignalBoard(symbols: string[]) {
