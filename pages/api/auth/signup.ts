@@ -62,6 +62,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error) {
     console.error("Signup failed", error);
-    return res.status(500).json({ error: "Internal server error during signup." });
+    return res.status(500).json({
+      error:
+        "Signup failed. The production database may not be initialized yet. Apply the Prisma migration to Supabase, then try again."
+    });
   }
 }
