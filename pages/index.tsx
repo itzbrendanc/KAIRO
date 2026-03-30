@@ -70,34 +70,54 @@ export default function Home() {
 
           <div className="landing-stock-visual">
             <div className="landing-stock-media">
-              <div className="landing-stock-browserbar">
-                <span />
-                <span />
-                <span />
-                <div className="landing-stock-browserpill">kairo.market</div>
+              <div className="landing-stock-demo">
+                <div className="landing-stock-browserbar">
+                  <span />
+                  <span />
+                  <span />
+                  <div className="landing-stock-browserpill">kairo.market</div>
+                </div>
+                <div className="landing-stock-demo-screen">
+                  <img src="/kairo-hero.gif" alt="KAIRO product walkthrough animation" />
+                  <div className="landing-stock-demo-copy">
+                    <div className="landing-stock-demo-label">How it works</div>
+                    <strong>Upload context. Track markets. Read the signal.</strong>
+                  </div>
+                </div>
               </div>
-              <img src="/kairo-hero.gif" alt="KAIRO market motion backdrop" />
-              <div className="landing-stock-chart" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="landing-stock-card landing-stock-card-main">
-                <div className="landing-stock-card-icon">K</div>
-                <div className="landing-stock-card-lines">
+
+              <div className="landing-stock-chart-card">
+                <div className="landing-stock-chart-head">
+                  <div>
+                    <div className="landing-stock-demo-label">Live chart</div>
+                    <strong>Signal momentum stream</strong>
+                  </div>
+                  <div className="landing-stock-tag landing-stock-tag-positive">+3.78%</div>
+                </div>
+                <div className="landing-stock-chart-grid" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
                   <span />
                   <span />
                   <span />
                 </div>
+                <div className="landing-stock-card landing-stock-card-main">
+                  <div className="landing-stock-card-icon">K</div>
+                  <div className="landing-stock-card-lines">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+                <div className="landing-stock-tag landing-stock-tag-alert">AI BUY</div>
               </div>
-              <div className="landing-stock-tag landing-stock-tag-positive">+3.78%</div>
-              <div className="landing-stock-tag landing-stock-tag-alert">AI BUY</div>
             </div>
           </div>
         </section>
