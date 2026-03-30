@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getApiSession } from "@/lib/auth";
-import { buildChatContext, detectSymbol } from "@/lib/chat-assistant";
+import { buildChatContext, detectSymbol, generateChatReply } from "@/lib/chat-assistant";
 import { getUserProfile } from "@/lib/repository";
-import { generateOpenAIChatReply } from "@/lib/openai-chat";
+import { generateOpenAIChatReply, hasUsableOpenAIKey } from "@/lib/openai-chat";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -22,12 +22,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const session = await getApiSession(req, res);
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        error: "OPENAI_API_KEY is not configured. Add it in Vercel to enable direct ChatGPT answers."
-      });
-    }
-
     const conversation = (messages ?? [])
       .filter((item) => item?.content?.trim() && (item.role === "user" || item.role === "assistant"))
       .slice(-10);
@@ -48,12 +42,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .join("\n")
       : undefined;
     const symbol = detectSymbol(message);
-    const reply = await generateOpenAIChatReply(conversation, context, userMemory);
+    if (!hasUsableOpenAIKey()) {
+      const fallback = await generateChatReply(message);
+      return res.status(200).json({
+        title: fallback.title,
+        answer: fallback.answer,
+        source: "kairo",
+        symbol
+      });
+    }
 
-    return res.status(200).json({
-      ...reply,
-      symbol
-    });
+    try {
+      const reply = await generateOpenAIChatReply(conversation, context, userMemory);
+
+      return res.status(200).json({
+        ...reply,
+        symbol
+      });
+    } catch (error) {
+      const fallback = await generateChatReply(message);
+
+      return res.status(200).json({
+        title: fallback.title,
+        answer: fallback.answer,
+        source: "kairo",
+        symbol,
+        fallbackReason: error instanceof Error ? error.message : "OpenAI request failed."
+      });
+    }
   } catch (error) {
     return res.status(500).json({
       error: error instanceof Error ? error.message : "Unable to generate a response."

@@ -9,6 +9,24 @@ type ChatReply = {
   source: "chatgpt" | "kairo";
 };
 
+function looksLikePlaceholderKey(apiKey: string) {
+  const normalized = apiKey.trim().toLowerCase();
+  return (
+    !normalized ||
+    normalized.includes("your_openai") ||
+    normalized.includes("replace") ||
+    normalized.includes("example") ||
+    normalized.includes("***") ||
+    normalized === "sk-..." ||
+    normalized === "sk_test_replace_me"
+  );
+}
+
+export function hasUsableOpenAIKey() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  return Boolean(apiKey && !looksLikePlaceholderKey(apiKey));
+}
+
 function buildSystemPrompt(context: string, userMemory?: string) {
   return [
     "You are KAIRO AI, an investing copilot inside the KAIRO platform.",
@@ -48,8 +66,8 @@ export async function generateOpenAIChatReply(
 ): Promise<ChatReply> {
   const apiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured.");
+  if (!apiKey || looksLikePlaceholderKey(apiKey)) {
+    throw new Error("OpenAI is not configured with a real API key.");
   }
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -91,8 +109,8 @@ export async function streamOpenAIChatReply(
 ) {
   const apiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured.");
+  if (!apiKey || looksLikePlaceholderKey(apiKey)) {
+    throw new Error("OpenAI is not configured with a real API key.");
   }
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getApiSession } from "@/lib/auth";
-import { buildChatContext, detectSymbol } from "@/lib/chat-assistant";
+import { buildChatContext, detectSymbol, generateChatReply } from "@/lib/chat-assistant";
 import { getUserProfile } from "@/lib/repository";
-import { streamOpenAIChatReply } from "@/lib/openai-chat";
+import { hasUsableOpenAIKey, streamOpenAIChatReply } from "@/lib/openai-chat";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -26,12 +26,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const session = await getApiSession(req, res);
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        error: "OPENAI_API_KEY is not configured. Add it in Vercel to enable direct ChatGPT streaming."
-      });
-    }
-
     const context = await buildChatContext(message);
     const profile = session?.user ? await getUserProfile(session.user.id) : null;
     const userMemory = profile
@@ -49,6 +43,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .join("\n")
       : undefined;
     const symbol = detectSymbol(message);
+
+    if (!hasUsableOpenAIKey()) {
+      const fallback = await generateChatReply(message);
+      res.writeHead(200, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-KAIRO-Source": "kairo",
+        "X-KAIRO-Symbol": symbol ?? ""
+      });
+      res.write(fallback.answer);
+      return res.end();
+    }
+
     res.writeHead(200, {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
@@ -57,9 +65,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "X-KAIRO-Symbol": symbol ?? ""
     });
 
-    await streamOpenAIChatReply(conversation, context, userMemory, (chunk) => {
-      res.write(chunk);
-    });
+    try {
+      await streamOpenAIChatReply(conversation, context, userMemory, (chunk) => {
+        res.write(chunk);
+      });
+    } catch {
+      const fallback = await generateChatReply(message);
+      res.write(fallback.answer);
+    }
 
     return res.end();
   } catch (error) {

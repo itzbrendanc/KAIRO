@@ -37,7 +37,7 @@ export async function generateChatReply(question: string) {
 
     return {
       title: `${quote.company} analysis`,
-      answer: `${quote.company} (${quote.symbol}) is currently ${signal.recommendation} rated by KAIRO. The stock is trading at ${formatCurrency(quote.price)}, with a move of ${formatPercent(quote.changePercent)}. ${signal.stockSummary} ${signal.explanation} ${earningsLine}${topHeadline ? ` Most important live headline: ${topHeadline.title}` : ""}`,
+      answer: `${quote.company} (${quote.symbol}) is currently rated ${signal.recommendation} by KAIRO.\n\nThe stock is trading at ${formatCurrency(quote.price)} with a move of ${formatPercent(quote.changePercent)}. ${signal.stockSummary}\n\nWhy KAIRO sees it this way: ${signal.explanation}\n\n${earningsLine}${topHeadline ? ` Most important live headline: ${topHeadline.title}.` : ""}`,
       suggestions: [
         `What are the risks for ${quote.symbol}?`,
         `Explain ${quote.symbol} earnings`,
@@ -53,11 +53,11 @@ export async function generateChatReply(question: string) {
 
     return {
       title: "Market overview",
-      answer: `Here is the current KAIRO market read. Top strength: ${gainers
+      answer: `Here is the current KAIRO market read.\n\nTop strength: ${gainers
         .map((item) => `${item.symbol} ${formatPercent(item.changePercent)}`)
-        .join(", ")}. Main weakness: ${losers
+        .join(", ")}.\n\nMain weakness: ${losers
         .map((item) => `${item.symbol} ${formatPercent(item.changePercent)}`)
-        .join(", ")}. Use the market activity page to compare equities, crypto, currencies, and benchmark proxies side by side.`,
+        .join(", ")}.\n\nUse the market activity page to compare equities, crypto, currencies, and benchmark proxies side by side.`,
       suggestions: [
         "Which sectors look strongest right now?",
         "Give me the best stocks to watch today",
@@ -71,7 +71,7 @@ export async function generateChatReply(question: string) {
       ACADEMY_LESSONS.find((item) => item.category === "Money Management") ?? ACADEMY_LESSONS[2];
     return {
       title: lesson.title,
-      answer: `${lesson.description} Core idea: ${lesson.coreIdea} The most important actions are: ${lesson.steps.join(" ")} Avoid these mistakes: ${lesson.mistakes.join(" ")}`
+      answer: `${lesson.description}\n\nCore idea: ${lesson.coreIdea}\n\nThe most important actions are: ${lesson.steps.join(" ")}\n\nAvoid these mistakes: ${lesson.mistakes.join(" ")}`
     };
   }
 
@@ -79,14 +79,14 @@ export async function generateChatReply(question: string) {
   if (lesson) {
     return {
       title: lesson.title,
-      answer: `${lesson.description} Core idea: ${lesson.coreIdea} What you should do: ${lesson.steps.join(" ")} Common mistakes: ${lesson.mistakes.join(" ")}`
+      answer: `${lesson.description}\n\nCore idea: ${lesson.coreIdea}\n\nWhat you should do: ${lesson.steps.join(" ")}\n\nCommon mistakes: ${lesson.mistakes.join(" ")}`
     };
   }
 
   return {
     title: "KAIRO Assistant",
     answer:
-      "I can help with stock analysis, buy/hold/sell ratings, earnings context, market summaries, trading strategy, money management, watchlist ideas, and beginner lessons. Try asking about a stock symbol like AAPL, a market question like 'What matters today?', or a lesson topic like risk management."
+      "I can help with stock analysis, buy, hold, and sell ratings, earnings context, market summaries, trading strategy, money management, watchlist ideas, and beginner lessons.\n\nTry asking about a stock symbol like AAPL, a market question like 'What matters today?', or a lesson topic like risk management."
   };
 }
 
