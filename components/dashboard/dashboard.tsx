@@ -199,6 +199,19 @@ export function Dashboard({
       .sort((left, right) => right.avgChange - left.avgChange)
       .slice(0, 6);
   }, [board]);
+  const dailyBrief = useMemo(
+    () => [
+      `Primary focus: ${data.quote.symbol} is rated ${data.signal.recommendation.toLowerCase()} with ${Math.round(data.signal.confidence * 100)}% confidence based on trend, momentum, and sentiment.`,
+      `${liveBoardCount} of ${board.length} tracked quotes are live right now, which helps users see where leadership is actually forming.`,
+      visibleNews.length > 0
+        ? `Headline watch: ${visibleNews[0]?.title}`
+        : "Headline watch: no live catalyst is attached to the active symbol right now, so price action matters more than headlines.",
+      premium
+        ? "Premium workflow: review the full signal board, compare sector leadership, and check whether your watchlist is diverging from the index."
+        : "Free workflow: scan the board, open a few stock pages, then upgrade when you want the full reasoning layer, alerts, and portfolio review."
+    ],
+    [board.length, data.quote.symbol, data.signal.confidence, data.signal.recommendation, liveBoardCount, premium, visibleNews]
+  );
 
   return (
     <div className="stack">
@@ -253,6 +266,25 @@ export function Dashboard({
           value={data.signal.recommendation}
           helper={premium ? `${Math.round(data.signal.confidence * 100)}% confidence` : "Premium unlocks full confidence"}
         />
+      </section>
+
+      <section className="panel terminal-panel">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">Daily brief</div>
+            <h2>Your repeat-usage loop</h2>
+            <p className="muted-copy">
+              This is the type of summary KAIRO should deliver every morning and every watchlist refresh to drive habit formation, faster decision-making, and better retention.
+            </p>
+          </div>
+        </div>
+        <div className="lesson-list">
+          {dailyBrief.map((item) => (
+            <div key={item} className="lesson-card">
+              <p className="muted-copy">{item}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="market-overview-grid">

@@ -2,6 +2,15 @@
 
 KAIRO is a full-stack Next.js investment dashboard with Prisma schema support, NextAuth-powered Google and email authentication, verified email signup, live-style stock APIs, news, AI signals, Stripe subscriptions, and email marketing tools.
 
+## Business model direction
+
+KAIRO is being shaped into an AI-powered trading research subscription business with:
+
+- public product exploration before signup
+- free-to-paid conversion through saved watchlists, AI signals, portfolio tools, and daily briefs
+- trust-first positioning with clearer disclaimers and transparent signal reasoning
+- founder-facing routes for business execution at `/trust` and `/launch-plan`
+
 ## Folder structure
 
 ```text

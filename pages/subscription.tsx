@@ -3,6 +3,39 @@ import type { GetServerSideProps } from "next";
 import { getPageSession } from "@/lib/auth";
 import { getUserSubscription } from "@/lib/repository";
 
+const plans = [
+  {
+    name: "Free",
+    price: "$0",
+    body: "Open product exploration, signal previews, community browsing, and paper-trading access.",
+    bullets: [
+      "Browse dashboard, markets, news, and stock research",
+      "Preview AI signals before paying",
+      "Learn in KAIRO Academy and test ideas in simulation"
+    ]
+  },
+  {
+    name: "Pro",
+    price: "$39/mo target",
+    body: "Full AI signals, unlimited watchlists, portfolio analytics, alerts, and daily brief retention loops.",
+    bullets: [
+      "Full buy, hold, and sell reasoning",
+      "Daily brief, signal-change alerts, and saved AI chat history",
+      "Unlimited watchlists and deeper stock analysis"
+    ]
+  },
+  {
+    name: "Pro+",
+    price: "$99/mo roadmap",
+    body: "Advanced portfolio doctor workflows, richer earnings workflows, and premium strategy rooms.",
+    bullets: [
+      "Portfolio concentration and risk review",
+      "Premium community and advanced coaching",
+      "Higher-touch analysis for serious users"
+    ]
+  }
+];
+
 export default function SubscriptionPage({
   premium,
   subscriptionStatus,
@@ -46,9 +79,9 @@ export default function SubscriptionPage({
     <div className="stack">
       <section className="panel">
         <div className="eyebrow">Plans</div>
-        <h1>KAIRO Free and Premium</h1>
+        <h1>KAIRO pricing built for conversion and retention</h1>
         <p className="muted-copy">
-          Premium unlocks more AI signals, historical trend access, and full AI analysis. Stripe handles payment collection securely and the backend updates your premium access after Stripe confirms the subscription.
+          Let people explore first, then convert them when they want saved workflows, alerts, portfolio analysis, and full AI reasoning. That is the simplest path from free usage to recurring revenue.
         </p>
         {checkoutState === "success" ? <p className="success-copy">Stripe checkout completed. Premium access will update as soon as the webhook confirms your subscription.</p> : null}
         {checkoutState === "canceled" ? <p className="muted-copy">Stripe checkout was canceled. Your account is still on the free plan.</p> : null}
@@ -57,15 +90,29 @@ export default function SubscriptionPage({
       </section>
 
       <div className="card-grid">
-        <div className="panel">
-          <div className="eyebrow">Free</div>
-          <h2>$0</h2>
-          <p className="muted-copy">Dashboard access, watchlists, market news, and preview AI signals.</p>
-        </div>
-        <div className="panel">
-          <div className="eyebrow">Premium</div>
-          <h2>$24/mo</h2>
-          <p className="muted-copy">Full signal explanations, historical trends, portfolio insights, and premium subscriber workflows.</p>
+        {plans.map((plan) => (
+          <div key={plan.name} className="panel tier-card">
+            <div className="eyebrow">{plan.name}</div>
+            <h2>{plan.price}</h2>
+            <p className="muted-copy">{plan.body}</p>
+            <div className="lesson-list">
+              {plan.bullets.map((bullet) => (
+                <div key={bullet} className="lesson-card">
+                  <p className="muted-copy">{bullet}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card-grid">
+        <div className="panel tier-card">
+          <div className="eyebrow">Current checkout</div>
+          <h2>{isPremium ? "Manage billing" : "Upgrade with Stripe"}</h2>
+          <p className="muted-copy">
+            Stripe handles the payment flow securely. The exact live price shown at checkout comes from your configured Stripe price in production.
+          </p>
           <button
             className="primary-button"
             disabled={loading}
@@ -78,6 +125,16 @@ export default function SubscriptionPage({
               ? "Your premium access stays in sync with Stripe subscription events."
               : "Checkout opens in Stripe and premium access activates after Stripe confirms payment."}
           </p>
+        </div>
+        <div className="panel tier-card">
+          <div className="eyebrow">Path to $10k MRR</div>
+          <h2>Use one simple scorecard</h2>
+          <p className="muted-copy">
+            180 Pro users at $39/month generate $7,020 MRR. 30 Pro+ users at $99/month generate $2,970 MRR. Together that is $9,990 MRR, so one more Pro user pushes KAIRO over the goal.
+          </p>
+          <div className="success-banner">
+            Free users should see enough value to form a habit. Paid users should unlock the deeper workflows that justify staying subscribed.
+          </div>
         </div>
       </div>
     </div>

@@ -36,7 +36,7 @@ export default function Home() {
             <Link href="/news-insight">News & Insight</Link>
             <Link href="/solutions">Solutions</Link>
             <Link href="/chat">AI Chat</Link>
-            <a href="#about">About</a>
+            <Link href="/trust">Trust</Link>
           </nav>
           <Link className="primary-button link-button landing-stock-open" href="/dashboard">
             Explore Live App
@@ -73,6 +73,7 @@ export default function Home() {
               <Link href="/market-activity">Explore Market Activity</Link>
               <Link href="/stocks/AAPL">Open Stock Research</Link>
               <Link href="/solutions">See How It Works</Link>
+              <Link href="/launch-plan">See Launch Plan</Link>
             </div>
           </div>
 
@@ -215,6 +216,18 @@ export default function Home() {
                 <strong>Paper Trading</strong>
                 <p className="muted-copy">
                   Practice trades, study your journal, and learn money management before ever upgrading or committing real capital.
+                </p>
+              </Link>
+              <Link href="/trust" className="lesson-card">
+                <strong>Trust and Legal</strong>
+                <p className="muted-copy">
+                  Understand how KAIRO presents AI signals responsibly, avoids hype, and uses disclaimers to build confidence with users.
+                </p>
+              </Link>
+              <Link href="/launch-plan" className="lesson-card">
+                <strong>Founder Launch Plan</strong>
+                <p className="muted-copy">
+                  Review the pricing, growth loops, and 30-day execution plan designed to push KAIRO toward a realistic $10k MRR target.
                 </p>
               </Link>
             </div>

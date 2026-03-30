@@ -103,6 +103,17 @@ textarea {
   gap: 12px;
 }
 
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  padding-top: 0;
+  padding-bottom: 28px;
+}
+
 .symbol-search {
   position: relative;
   width: min(280px, 100%);
@@ -1020,10 +1031,28 @@ textarea {
   gap: 20px;
 }
 
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 18px;
+}
+
+.tier-card {
+  align-content: start;
+}
+
+.plan-price {
+  margin: 10px 0 8px;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #171f39;
 }
 
 .stat-card {
@@ -1532,6 +1561,11 @@ textarea {
   color: #513693;
   line-height: 1.55;
   word-break: break-word;
+}
+
+.public-page .lesson-card strong,
+.tier-card h2 {
+  color: #161e37;
 }
 
 .floating-banner {
@@ -2138,6 +2172,12 @@ textarea {
   }
 
   .premium-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-footer,
+  .button-row {
     flex-direction: column;
     align-items: flex-start;
   }

@@ -140,9 +140,14 @@ export default function SolutionsPage() {
             Once users understand the basics, they can move into KAIRO’s paper-trading area to practice position sizing, journaling, and strategy discipline without risking real money.
           </p>
         </div>
-        <Link className="primary-button link-button" href="/portfolio">
-          Open Paper Trading
-        </Link>
+        <div className="button-row">
+          <Link className="primary-button link-button" href="/portfolio">
+            Open Paper Trading
+          </Link>
+          <Link className="ghost-button link-button" href="/launch-plan">
+            View launch plan
+          </Link>
+        </div>
       </section>
     </div>
   );
