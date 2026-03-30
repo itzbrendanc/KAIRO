@@ -13,6 +13,7 @@ export function AuthForm({
   showGoogle: boolean;
 }) {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(true);
@@ -50,6 +51,7 @@ export function AuthForm({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        name: name.trim(),
         email: normalizedEmail,
         password,
         marketingOptIn,
@@ -161,6 +163,15 @@ export function AuthForm({
           </button>
         ) : null}
 
+        {mode === "signup" ? (
+          <input
+            className="text-input"
+            type="text"
+            placeholder="Full name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        ) : null}
         <input
           className="text-input"
           type="email"

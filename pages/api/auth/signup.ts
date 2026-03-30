@@ -13,12 +13,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: "Method not allowed." });
     }
 
-    const { email, password, marketingOptIn, productUpdatesOptIn } = req.body as {
+    const { name, email, password, marketingOptIn, productUpdatesOptIn } = req.body as {
+      name?: string;
       email?: string;
       password?: string;
       marketingOptIn?: boolean;
       productUpdatesOptIn?: boolean;
     };
+    const normalizedName = name?.trim();
     const normalizedEmail = email?.trim().toLowerCase();
 
     if (!normalizedEmail || !normalizedEmail.includes("@")) {
@@ -36,6 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await createEmailUser({
+      name: normalizedName || normalizedEmail.split("@")[0],
       email: normalizedEmail,
       passwordHash,
       marketingOptIn: Boolean(marketingOptIn),
