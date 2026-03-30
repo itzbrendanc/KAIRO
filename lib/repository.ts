@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, Subscription, Watchlist } from "@prisma/client";
+import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, Subscription, UserProfile, Watchlist } from "@prisma/client";
 import { ensureDatabaseInitialized } from "@/lib/db-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { STOCKS } from "@/data/stocks";
@@ -101,6 +101,22 @@ type InMemoryChatMessage = {
   createdAt: Date;
 };
 
+type InMemoryUserProfile = {
+  id: number;
+  userId: number;
+  experienceLevel: string;
+  riskTolerance: string;
+  investingGoal: string;
+  timeHorizon: string;
+  favoriteSectors: string | null;
+  favoriteSymbols: string | null;
+  preferredStrategies: string | null;
+  bio: string | null;
+  onboardingCompleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const memory = {
   userId: 1,
   verificationId: 1,
@@ -111,6 +127,7 @@ const memory = {
   watchlistId: 1,
   chatThreadId: 1,
   chatMessageId: 1,
+  profileId: 1,
   users: new Map<string, InMemoryUser>(),
   verificationTokens: new Map<string, InMemoryVerificationToken>(),
   audience: new Map<string, InMemoryAudienceMember>(),
@@ -119,7 +136,8 @@ const memory = {
   subscriptions: new Map<number, InMemorySubscription>(),
   watchlist: new Map<number, InMemoryWatchlist>(),
   chatThreads: new Map<number, InMemoryChatThread>(),
-  chatMessages: new Map<number, InMemoryChatMessage>()
+  chatMessages: new Map<number, InMemoryChatMessage>(),
+  profiles: new Map<number, InMemoryUserProfile>()
 };
 
 function lower(email: string) {
@@ -155,6 +173,24 @@ export async function findUserById(id: number) {
     () => prisma.user.findUnique({ where: { id } }),
     () => Array.from(memory.users.values()).find((user) => user.id === id) ?? null
   );
+}
+
+function makeDefaultProfile(userId: number): InMemoryUserProfile {
+  return {
+    id: memory.profileId++,
+    userId,
+    experienceLevel: "beginner",
+    riskTolerance: "moderate",
+    investingGoal: "long-term growth",
+    timeHorizon: "swing",
+    favoriteSectors: null,
+    favoriteSymbols: null,
+    preferredStrategies: null,
+    bio: null,
+    onboardingCompleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
 }
 
 export async function createEmailUser(input: {
@@ -193,6 +229,96 @@ export async function createEmailUser(input: {
       };
       memory.users.set(normalized, user);
       return user;
+    }
+  );
+}
+
+export async function getUserProfile(userId: number) {
+  return withFallback(
+    async () => {
+      const existing = await prisma.userProfile.findUnique({
+        where: { userId }
+      });
+
+      if (existing) {
+        return existing;
+      }
+
+      return prisma.userProfile.create({
+        data: {
+          userId
+        }
+      });
+    },
+    () => {
+      const existing = memory.profiles.get(userId);
+      if (existing) {
+        return existing as unknown as UserProfile;
+      }
+
+      const profile = makeDefaultProfile(userId);
+      memory.profiles.set(userId, profile);
+      return profile as unknown as UserProfile;
+    }
+  );
+}
+
+export async function updateUserProfile(
+  userId: number,
+  input: {
+    experienceLevel: string;
+    riskTolerance: string;
+    investingGoal: string;
+    timeHorizon: string;
+    favoriteSectors?: string | null;
+    favoriteSymbols?: string | null;
+    preferredStrategies?: string | null;
+    bio?: string | null;
+    onboardingCompleted?: boolean;
+  }
+) {
+  return withFallback(
+    () =>
+      prisma.userProfile.upsert({
+        where: { userId },
+        update: {
+          experienceLevel: input.experienceLevel,
+          riskTolerance: input.riskTolerance,
+          investingGoal: input.investingGoal,
+          timeHorizon: input.timeHorizon,
+          favoriteSectors: input.favoriteSectors ?? null,
+          favoriteSymbols: input.favoriteSymbols ?? null,
+          preferredStrategies: input.preferredStrategies ?? null,
+          bio: input.bio ?? null,
+          onboardingCompleted: input.onboardingCompleted ?? true
+        },
+        create: {
+          userId,
+          experienceLevel: input.experienceLevel,
+          riskTolerance: input.riskTolerance,
+          investingGoal: input.investingGoal,
+          timeHorizon: input.timeHorizon,
+          favoriteSectors: input.favoriteSectors ?? null,
+          favoriteSymbols: input.favoriteSymbols ?? null,
+          preferredStrategies: input.preferredStrategies ?? null,
+          bio: input.bio ?? null,
+          onboardingCompleted: input.onboardingCompleted ?? true
+        }
+      }),
+    () => {
+      const existing = memory.profiles.get(userId) ?? makeDefaultProfile(userId);
+      existing.experienceLevel = input.experienceLevel;
+      existing.riskTolerance = input.riskTolerance;
+      existing.investingGoal = input.investingGoal;
+      existing.timeHorizon = input.timeHorizon;
+      existing.favoriteSectors = input.favoriteSectors ?? null;
+      existing.favoriteSymbols = input.favoriteSymbols ?? null;
+      existing.preferredStrategies = input.preferredStrategies ?? null;
+      existing.bio = input.bio ?? null;
+      existing.onboardingCompleted = input.onboardingCompleted ?? true;
+      existing.updatedAt = new Date();
+      memory.profiles.set(userId, existing);
+      return existing as unknown as UserProfile;
     }
   );
 }

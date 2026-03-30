@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { getApiSession } from "@/lib/auth";
 import { buildChatContext, detectSymbol } from "@/lib/chat-assistant";
+import { getUserProfile } from "@/lib/repository";
 import { streamOpenAIChatReply } from "@/lib/openai-chat";
 
 type ChatMessage = {
@@ -23,6 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .slice(-10);
 
   try {
+    const session = await getApiSession(req, res);
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({
         error: "OPENAI_API_KEY is not configured. Add it in Vercel to enable direct ChatGPT streaming."
@@ -30,6 +33,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const context = await buildChatContext(message);
+    const profile = session?.user ? await getUserProfile(session.user.id) : null;
+    const userMemory = profile
+      ? [
+          `Experience level: ${profile.experienceLevel}`,
+          `Risk tolerance: ${profile.riskTolerance}`,
+          `Investing goal: ${profile.investingGoal}`,
+          `Time horizon: ${profile.timeHorizon}`,
+          profile.favoriteSectors ? `Favorite sectors: ${profile.favoriteSectors}` : null,
+          profile.favoriteSymbols ? `Favorite symbols: ${profile.favoriteSymbols}` : null,
+          profile.preferredStrategies ? `Preferred strategies: ${profile.preferredStrategies}` : null,
+          profile.bio ? `User notes: ${profile.bio}` : null
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : undefined;
     const symbol = detectSymbol(message);
     res.writeHead(200, {
       "Content-Type": "text/plain; charset=utf-8",
@@ -39,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "X-KAIRO-Symbol": symbol ?? ""
     });
 
-    await streamOpenAIChatReply(conversation, context, (chunk) => {
+    await streamOpenAIChatReply(conversation, context, userMemory, (chunk) => {
       res.write(chunk);
     });
 

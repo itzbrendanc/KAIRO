@@ -145,6 +145,22 @@ const statements = [
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "ChatMessage_pkey" PRIMARY KEY ("id")
     )`,
+  `CREATE TABLE IF NOT EXISTS "UserProfile" (
+      "id" SERIAL NOT NULL,
+      "userId" INTEGER NOT NULL,
+      "experienceLevel" TEXT NOT NULL DEFAULT 'beginner',
+      "riskTolerance" TEXT NOT NULL DEFAULT 'moderate',
+      "investingGoal" TEXT NOT NULL DEFAULT 'long-term growth',
+      "timeHorizon" TEXT NOT NULL DEFAULT 'swing',
+      "favoriteSectors" TEXT,
+      "favoriteSymbols" TEXT,
+      "preferredStrategies" TEXT,
+      "bio" TEXT,
+      "onboardingCompleted" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "UserProfile_pkey" PRIMARY KEY ("id")
+    )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Watchlist_userId_symbol_key" ON "Watchlist"("userId", "symbol")`,
@@ -155,6 +171,7 @@ const statements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "AudienceMember_email_key" ON "AudienceMember"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "AudienceMember_userId_key" ON "AudienceMember"("userId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "StudyGroup_slug_key" ON "StudyGroup"("slug")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "UserProfile_userId_key" ON "UserProfile"("userId")`,
   `CREATE INDEX IF NOT EXISTS "ChatThread_userId_idx" ON "ChatThread"("userId")`,
   `CREATE INDEX IF NOT EXISTS "ChatMessage_threadId_idx" ON "ChatMessage"("threadId")`,
   `DO $$ BEGIN
@@ -210,6 +227,11 @@ const statements = [
   `DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ChatMessage_threadId_fkey') THEN
         ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "ChatThread"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$`,
+  `DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'UserProfile_userId_fkey') THEN
+        ALTER TABLE "UserProfile" ADD CONSTRAINT "UserProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
       END IF;
     END $$`
 ] as const;

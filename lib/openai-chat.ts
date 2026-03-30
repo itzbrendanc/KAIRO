@@ -9,7 +9,7 @@ type ChatReply = {
   source: "chatgpt" | "kairo";
 };
 
-function buildSystemPrompt(context: string) {
+function buildSystemPrompt(context: string, userMemory?: string) {
   return [
     "You are KAIRO AI, an investing copilot inside the KAIRO platform.",
     "Respond clearly, directly, and in plain English.",
@@ -17,11 +17,14 @@ function buildSystemPrompt(context: string) {
     "If you mention a stock stance, explain why in terms of trend, momentum, sentiment, and earnings risk when available.",
     "Keep answers concise but useful, usually 1-3 short paragraphs.",
     "You are not a financial advisor and should avoid guarantees.",
+    userMemory ? `User memory:\n${userMemory}` : null,
     `KAIRO context:\n${context}`
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
-function buildChatRequest(messages: ConversationMessage[], context: string, stream: boolean) {
+function buildChatRequest(messages: ConversationMessage[], context: string, stream: boolean, userMemory?: string) {
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   return {
@@ -29,7 +32,7 @@ function buildChatRequest(messages: ConversationMessage[], context: string, stre
     temperature: 0.4,
     stream,
     messages: [
-      { role: "system", content: buildSystemPrompt(context) },
+      { role: "system", content: buildSystemPrompt(context, userMemory) },
       ...messages.map((message) => ({
         role: message.role,
         content: message.content
@@ -40,7 +43,8 @@ function buildChatRequest(messages: ConversationMessage[], context: string, stre
 
 export async function generateOpenAIChatReply(
   messages: ConversationMessage[],
-  context: string
+  context: string,
+  userMemory?: string
 ): Promise<ChatReply> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -54,7 +58,7 @@ export async function generateOpenAIChatReply(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify(buildChatRequest(messages, context, false))
+    body: JSON.stringify(buildChatRequest(messages, context, false, userMemory))
   });
 
   const payload = (await response.json()) as {
@@ -82,6 +86,7 @@ export async function generateOpenAIChatReply(
 export async function streamOpenAIChatReply(
   messages: ConversationMessage[],
   context: string,
+  userMemory: string | undefined,
   onDelta: (chunk: string) => void
 ) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -96,7 +101,7 @@ export async function streamOpenAIChatReply(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify(buildChatRequest(messages, context, true))
+    body: JSON.stringify(buildChatRequest(messages, context, true, userMemory))
   });
 
   if (!response.ok || !response.body) {

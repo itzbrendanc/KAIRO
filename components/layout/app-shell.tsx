@@ -12,6 +12,7 @@ const links = [
   { href: "/academy", label: "Academy" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/community", label: "Community" },
+  { href: "/settings", label: "Settings" },
   { href: "/subscription", label: "Subscription" },
   { href: "/trust", label: "Trust" }
 ];
