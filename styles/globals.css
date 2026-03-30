@@ -1676,6 +1676,56 @@ textarea {
   box-shadow: 0 16px 30px rgba(90, 108, 169, 0.1);
 }
 
+.chat-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.55fr);
+  gap: 24px;
+}
+
+.chat-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.chat-thread {
+  display: grid;
+  gap: 14px;
+  max-height: 68vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.chat-bubble {
+  display: grid;
+  gap: 8px;
+  max-width: min(820px, 100%);
+  padding: 16px 18px;
+  border-radius: 22px;
+  line-height: 1.7;
+}
+
+.chat-bubble-user {
+  justify-self: end;
+  background: linear-gradient(135deg, rgba(79, 107, 255, 0.12), rgba(123, 77, 240, 0.1));
+  border: 1px solid rgba(79, 107, 255, 0.16);
+}
+
+.chat-bubble-assistant {
+  justify-self: start;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(108, 124, 170, 0.12);
+}
+
+.chat-title {
+  font-weight: 700;
+  color: #243152;
+}
+
+.chat-composer {
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-width: 960px) {
   .grid-3,
   .two-column,
@@ -1684,6 +1734,7 @@ textarea {
   .market-overview-grid,
   .academy-hero,
   .academy-layout,
+  .chat-layout,
   .academy-section-grid,
   .landing-stock-hero,
   .landing-stock-bottom,
