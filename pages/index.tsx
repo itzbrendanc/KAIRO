@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { useState } from "react";
-import type { GetServerSideProps } from "next";
-import { getPageSession } from "@/lib/auth";
 import { KairoLogo } from "@/components/branding/kairo-logo";
 
 export default function Home() {
@@ -37,15 +35,24 @@ export default function Home() {
             <Link href="/market-activity">Market Activity</Link>
             <Link href="/news-insight">News & Insight</Link>
             <Link href="/solutions">Solutions</Link>
+            <Link href="/chat">AI Chat</Link>
             <a href="#about">About</a>
           </nav>
-          <Link className="primary-button link-button landing-stock-open" href="/login">
-            Open App
+          <Link className="primary-button link-button landing-stock-open" href="/dashboard">
+            Explore Live App
           </Link>
         </header>
 
         <section className="landing-stock-hero" id="home">
           <div className="landing-stock-copy">
+            <div className="landing-stock-floating-words" aria-hidden="true">
+              <span>Signals</span>
+              <span>Momentum</span>
+              <span>Alpha</span>
+              <span>Macro</span>
+              <span>Risk</span>
+              <span>Earnings</span>
+            </div>
             <div className="landing-stock-kicker">Understand the market in under 60 seconds</div>
             <h1 className="landing-stock-title">
               Read the market faster.
@@ -55,15 +62,16 @@ export default function Home() {
               KAIRO turns live stocks, news, and signals into a cleaner investing workspace with plain-English intelligence, market context, and faster decision support.
             </p>
             <div className="landing-stock-actions">
-              <Link className="primary-button link-button" href="/signup">
-                Start Free
+              <Link className="primary-button link-button" href="/dashboard">
+                Open Live Dashboard
               </Link>
-              <Link className="ghost-button link-button" href="/dashboard">
-                Try Live Dashboard
+              <Link className="ghost-button link-button" href="/chat">
+                Chat With AI
               </Link>
             </div>
             <div className="landing-stock-linkrow">
               <Link href="/market-activity">Explore Market Activity</Link>
+              <Link href="/stocks/AAPL">Open Stock Research</Link>
               <Link href="/solutions">See How It Works</Link>
             </div>
           </div>
@@ -182,7 +190,31 @@ export default function Home() {
               <Link href="/academy" className="lesson-card">
                 <strong>KAIRO Academy</strong>
                 <p className="muted-copy">
-                  Follow a step-by-step lesson path with YouTube-style learning links covering market basics, money management, and professional-style trading process.
+                  Follow a step-by-step lesson path with native KAIRO lessons covering market basics, money management, and professional-style trading process.
+                </p>
+              </Link>
+              <Link href="/signals" className="lesson-card">
+                <strong>AI Signals</strong>
+                <p className="muted-copy">
+                  Browse buy, hold, and sell calls across the tracked market universe without signing in. Sign in only if you want to save your workflow.
+                </p>
+              </Link>
+              <Link href="/chat" className="lesson-card">
+                <strong>Ask KAIRO AI</strong>
+                <p className="muted-copy">
+                  Use the assistant like ChatGPT to ask about stocks, strategy, risk, indicators, and what is moving markets right now.
+                </p>
+              </Link>
+              <Link href="/community" className="lesson-card">
+                <strong>Community</strong>
+                <p className="muted-copy">
+                  Explore study groups and market discussions first. Sign in only when you want to post, personalize, or build a saved profile.
+                </p>
+              </Link>
+              <Link href="/portfolio" className="lesson-card">
+                <strong>Paper Trading</strong>
+                <p className="muted-copy">
+                  Practice trades, study your journal, and learn money management before ever upgrading or committing real capital.
                 </p>
               </Link>
             </div>
@@ -191,6 +223,9 @@ export default function Home() {
           <div className="landing-stock-panel landing-stock-panel-subscribe" id="about">
             <div className="eyebrow">Stay close to launch updates</div>
             <h3>Get product drops and platform emails</h3>
+            <p className="muted-copy">
+              You can browse KAIRO without an account. Sign in only when you want to save a personal watchlist, keep your chat history, or upgrade with Stripe.
+            </p>
             <div className="landing-stock-actions landing-stock-subscribe-row">
               <input
                 className="text-input"
@@ -207,18 +242,3 @@ export default function Home() {
     </div>
   );
 }
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await getPageSession(context);
-
-  if (session?.user) {
-    return {
-      redirect: {
-        destination: "/dashboard",
-        permanent: false
-      }
-    };
-  }
-
-  return { props: {} };
-};

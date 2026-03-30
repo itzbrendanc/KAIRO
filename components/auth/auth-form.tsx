@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { signIn } from "next-auth/react";
 import { KairoLogo } from "@/components/branding/kairo-logo";
@@ -140,6 +141,15 @@ export function AuthForm({
             ? "Continue with Google or your saved email and password. If this email is new, KAIRO will create your account automatically."
             : "Create your account once and keep using the same email whenever you return to KAIRO."}
         </p>
+        {mode === "login" ? (
+          <p className="muted-copy">
+            New here? <Link href="/signup" className="link-button">Sign up here</Link>.
+          </p>
+        ) : (
+          <p className="muted-copy">
+            Already have an account? <Link href="/login" className="link-button">Sign in here</Link>.
+          </p>
+        )}
 
         {showGoogle ? (
           <button

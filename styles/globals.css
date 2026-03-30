@@ -405,6 +405,7 @@ textarea {
 }
 
 .landing-stock-copy {
+  position: relative;
   display: grid;
   align-content: center;
   gap: 22px;
@@ -412,6 +413,67 @@ textarea {
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.72) 100%),
     radial-gradient(circle at 10% 50%, rgba(79, 107, 255, 0.08), transparent 48%);
+}
+
+.landing-stock-floating-words {
+  position: absolute;
+  inset: 28px 28px auto 28px;
+  pointer-events: none;
+}
+
+.landing-stock-floating-words span {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(73, 94, 157, 0.86);
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(108, 124, 170, 0.12);
+  box-shadow: 0 14px 30px rgba(99, 117, 171, 0.08);
+  backdrop-filter: blur(12px);
+  animation: textOrbit 9s ease-in-out infinite;
+}
+
+.landing-stock-floating-words span:nth-child(1) {
+  top: 8px;
+  left: 8px;
+  animation-delay: -0.6s;
+}
+
+.landing-stock-floating-words span:nth-child(2) {
+  top: 20px;
+  right: 104px;
+  animation-delay: -2.8s;
+}
+
+.landing-stock-floating-words span:nth-child(3) {
+  top: 132px;
+  right: 24px;
+  animation-delay: -1.4s;
+}
+
+.landing-stock-floating-words span:nth-child(4) {
+  bottom: 170px;
+  left: 0;
+  animation-delay: -3.4s;
+}
+
+.landing-stock-floating-words span:nth-child(5) {
+  bottom: 116px;
+  right: 142px;
+  animation-delay: -2.1s;
+}
+
+.landing-stock-floating-words span:nth-child(6) {
+  bottom: 36px;
+  left: 72px;
+  animation-delay: -4.2s;
 }
 
 .landing-stock-kicker {
@@ -427,16 +489,21 @@ textarea {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(108, 124, 170, 0.1);
   box-shadow: 0 12px 28px rgba(102, 118, 167, 0.08);
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  animation: softFloat 6.8s ease-in-out infinite;
 }
 
 .landing-stock-title {
   margin: 0;
   max-width: 12ch;
   font-size: clamp(3.15rem, 6.6vw, 5.35rem);
-  line-height: 1.02;
+  line-height: 1.08;
   font-weight: 760;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.038em;
   color: #10182f;
+  text-wrap: balance;
+  transition: transform 240ms ease, text-shadow 240ms ease;
+  animation: softFloat 7.6s ease-in-out infinite;
 }
 
 .landing-stock-title span {
@@ -445,6 +512,8 @@ textarea {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  background-size: 200% 200%;
+  animation: gradientDrift 9s ease-in-out infinite;
 }
 
 .landing-stock-lead {
@@ -452,12 +521,16 @@ textarea {
   color: #687898;
   line-height: 1.72;
   font-size: 1.06rem;
+  transition: transform 220ms ease, color 220ms ease;
+  animation: softFloat 8.8s ease-in-out infinite;
+  animation-delay: -1.4s;
 }
 
 .landing-stock-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  transition: transform 220ms ease;
 }
 
 .landing-stock-linkrow {
@@ -467,6 +540,23 @@ textarea {
   font-size: 0.95rem;
   color: #627398;
   font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.landing-stock-copy:hover .landing-stock-kicker {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px rgba(102, 118, 167, 0.12);
+  border-color: rgba(79, 107, 255, 0.16);
+}
+
+.landing-stock-copy:hover .landing-stock-title {
+  transform: translateY(-3px);
+  text-shadow: 0 20px 40px rgba(79, 107, 255, 0.12);
+}
+
+.landing-stock-copy:hover .landing-stock-lead,
+.landing-stock-copy:hover .landing-stock-actions {
+  transform: translateY(-2px);
 }
 
 .landing-stock-visual {
@@ -736,6 +826,38 @@ textarea {
   50% {
     transform: scaleY(1.08);
     opacity: 1;
+  }
+}
+
+@keyframes softFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes textOrbit {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: translate3d(0, -12px, 0) rotate(-1.5deg);
+    opacity: 1;
+  }
+}
+
+@keyframes gradientDrift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
   }
 }
 

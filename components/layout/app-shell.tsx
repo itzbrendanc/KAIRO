@@ -12,8 +12,7 @@ const links = [
   { href: "/academy", label: "Academy" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/community", label: "Community" },
-  { href: "/subscription", label: "Subscription" },
-  { href: "/audience", label: "Audience" }
+  { href: "/subscription", label: "Subscription" }
 ];
 
 export function AppShell({
@@ -41,6 +40,7 @@ export function AppShell({
               {link.label}
             </Link>
           ))}
+          {user ? <Link href="/audience">Audience</Link> : null}
         </nav>
         <div className="topbar-actions">
           <SymbolSearch />
