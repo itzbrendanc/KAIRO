@@ -28,12 +28,12 @@ export function KairoLogo({
         >
           <defs>
             <linearGradient id="kairo-gold" x1="8%" y1="10%" x2="88%" y2="92%">
-              <stop offset="0%" stopColor="#fff6d1" />
-              <stop offset="42%" stopColor="#e1bc63" />
-              <stop offset="100%" stopColor="#7b5a1a" />
+              <stop offset="0%" stopColor="#4f6bff" />
+              <stop offset="48%" stopColor="#7b4df0" />
+              <stop offset="100%" stopColor="#df4c87" />
             </linearGradient>
           </defs>
-          <rect x="4" y="4" width="112" height="112" rx="28" fill="#050505" stroke="rgba(255,255,255,0.12)" />
+          <rect x="4" y="4" width="112" height="112" rx="28" fill="#ffffff" stroke="rgba(108,124,170,0.14)" />
           <path
             d="M26 88L54 30L69 58L85 24L94 24L69 88L54 60L42 88Z"
             fill="url(#kairo-gold)"
@@ -41,12 +41,12 @@ export function KairoLogo({
           <path
             d="M34 93C48 80 64 75 87 72"
             fill="none"
-            stroke="#f6f2e8"
+            stroke="#182141"
             strokeWidth="4"
             strokeLinecap="round"
             opacity="0.92"
           />
-          <circle cx="90" cy="70" r="7" fill="#f4cf73" />
+          <circle cx="90" cy="70" r="7" fill="#7b4df0" />
         </svg>
       </div>
       {showWordmark ? (

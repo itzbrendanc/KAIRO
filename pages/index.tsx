@@ -25,6 +25,8 @@ export default function Home() {
   return (
     <div className="landing landing-stock">
       <div className="landing-stock-glow" aria-hidden="true" />
+      <div className="landing-stock-orb landing-stock-orb-left" aria-hidden="true" />
+      <div className="landing-stock-orb landing-stock-orb-right" aria-hidden="true" />
       <div className="landing-stock-shell">
         <header className="landing-stock-nav">
           <div className="landing-stock-brand">
@@ -37,34 +39,43 @@ export default function Home() {
             <a href="#solution">Solution</a>
             <a href="#about">About</a>
           </nav>
-          <div className="landing-stock-search">Signal Search</div>
+          <Link className="primary-button link-button landing-stock-open" href="/login">
+            Open App
+          </Link>
         </header>
 
         <section className="landing-stock-hero" id="home">
           <div className="landing-stock-copy">
-            <div className="landing-stock-kicker">KAIRO / live market intelligence</div>
+            <div className="landing-stock-kicker">Understand the market in under 60 seconds</div>
             <h1 className="landing-stock-title">
-              Trade the market with a cleaner future-facing edge.
+              Read the market faster.
+              <span>Understand what moves next.</span>
             </h1>
             <p className="landing-stock-lead">
-              Live quotes, AI signals, curated market news, and premium trading workflows wrapped in a sharper interface built to feel fast, modern, and credible.
+              KAIRO turns live stocks, news, and signals into a cleaner investing workspace with plain-English intelligence, market context, and faster decision support.
             </p>
             <div className="landing-stock-actions">
               <Link className="primary-button link-button" href="/signup">
                 Start Free
               </Link>
-              <Link className="ghost-button link-button" href="/login">
-                Sign In
+              <Link className="ghost-button link-button" href="/dashboard">
+                Try Live Dashboard
               </Link>
             </div>
             <div className="landing-stock-linkrow">
-              <a href="#activity">View Market Activity</a>
-              <a href="#solution">Learn More</a>
+              <a href="#activity">Explore Market Activity</a>
+              <a href="#solution">See How It Works</a>
             </div>
           </div>
 
           <div className="landing-stock-visual">
             <div className="landing-stock-media">
+              <div className="landing-stock-browserbar">
+                <span />
+                <span />
+                <span />
+                <div className="landing-stock-browserpill">kairo.market</div>
+              </div>
               <img src="/kairo-hero.gif" alt="KAIRO market motion backdrop" />
               <div className="landing-stock-chart" aria-hidden="true">
                 <span />
@@ -76,6 +87,14 @@ export default function Home() {
                 <span />
                 <span />
                 <span />
+              </div>
+              <div className="landing-stock-card landing-stock-card-main">
+                <div className="landing-stock-card-icon">K</div>
+                <div className="landing-stock-card-lines">
+                  <span />
+                  <span />
+                  <span />
+                </div>
               </div>
               <div className="landing-stock-tag landing-stock-tag-positive">+3.78%</div>
               <div className="landing-stock-tag landing-stock-tag-alert">AI BUY</div>
