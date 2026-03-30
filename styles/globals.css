@@ -1448,6 +1448,16 @@ textarea {
   gap: 12px;
 }
 
+.public-page {
+  padding-top: 36px;
+  padding-bottom: 48px;
+}
+
+.public-hero {
+  display: grid;
+  gap: 12px;
+}
+
 @media (max-width: 960px) {
   .grid-3,
   .two-column,

@@ -34,9 +34,9 @@ export default function Home() {
           </div>
           <nav className="landing-stock-links">
             <a href="#home">Home</a>
-            <a href="#activity">Market Activity</a>
-            <a href="#insight">News & Insight</a>
-            <a href="#solution">Solution</a>
+            <Link href="/market-activity">Market Activity</Link>
+            <Link href="/news-insight">News & Insight</Link>
+            <Link href="/solutions">Solutions</Link>
             <a href="#about">About</a>
           </nav>
           <Link className="primary-button link-button landing-stock-open" href="/login">
@@ -63,8 +63,8 @@ export default function Home() {
               </Link>
             </div>
             <div className="landing-stock-linkrow">
-              <a href="#activity">Explore Market Activity</a>
-              <a href="#solution">See How It Works</a>
+              <Link href="/market-activity">Explore Market Activity</Link>
+              <Link href="/solutions">See How It Works</Link>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export default function Home() {
         <section className="landing-stock-strip" id="activity">
           <div className="landing-stock-strip-head">
             <span>Top market pulse</span>
-            <a href="/dashboard">Open live board</a>
+            <Link href="/market-activity">Open market activity</Link>
           </div>
           <div className="landing-stock-tickers">
             <article className="landing-stock-ticker">
@@ -159,10 +159,27 @@ export default function Home() {
         <section className="landing-stock-bottom" id="solution">
           <div className="landing-stock-panel">
             <div className="eyebrow">Built for confidence</div>
-            <h2>Less noise. Better signal density.</h2>
-            <p className="muted-copy">
-              KAIRO combines live market boards, chart-driven intelligence, premium watchlists, and collaborative signal rooms inside a faster, darker, more intentional trading environment.
-            </p>
+            <h2>Explore the product by workflow</h2>
+            <div className="lesson-list">
+              <Link href="/market-activity" className="lesson-card">
+                <strong>Market Activity</strong>
+                <p className="muted-copy">
+                  See the KAIRO market universe in one large display with stocks, index ETFs, sector groups, and fast-refreshing board data.
+                </p>
+              </Link>
+              <Link href="/news-insight" className="lesson-card">
+                <strong>News & Insight</strong>
+                <p className="muted-copy">
+                  Read the most important live headlines across tracked names, ranked to surface the stories most likely to move markets.
+                </p>
+              </Link>
+              <Link href="/solutions" className="lesson-card">
+                <strong>Solutions</strong>
+                <p className="muted-copy">
+                  Learn how to start trading, understand investing styles, and study different stock categories before risking real capital.
+                </p>
+              </Link>
+            </div>
           </div>
 
           <div className="landing-stock-panel landing-stock-panel-subscribe" id="about">
