@@ -161,6 +161,17 @@ const statements = [
       "updatedAt" TIMESTAMP(3) NOT NULL,
       CONSTRAINT "UserProfile_pkey" PRIMARY KEY ("id")
     )`,
+  `CREATE TABLE IF NOT EXISTS "LoginEvent" (
+      "id" SERIAL NOT NULL,
+      "userId" INTEGER,
+      "email" TEXT NOT NULL,
+      "provider" TEXT NOT NULL,
+      "eventType" TEXT NOT NULL,
+      "ipAddress" TEXT,
+      "userAgent" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "LoginEvent_pkey" PRIMARY KEY ("id")
+    )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Watchlist_userId_symbol_key" ON "Watchlist"("userId", "symbol")`,
@@ -174,6 +185,8 @@ const statements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "UserProfile_userId_key" ON "UserProfile"("userId")`,
   `CREATE INDEX IF NOT EXISTS "ChatThread_userId_idx" ON "ChatThread"("userId")`,
   `CREATE INDEX IF NOT EXISTS "ChatMessage_threadId_idx" ON "ChatMessage"("threadId")`,
+  `CREATE INDEX IF NOT EXISTS "LoginEvent_userId_idx" ON "LoginEvent"("userId")`,
+  `CREATE INDEX IF NOT EXISTS "LoginEvent_email_idx" ON "LoginEvent"("email")`,
   `DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Watchlist_userId_fkey') THEN
         ALTER TABLE "Watchlist" ADD CONSTRAINT "Watchlist_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -232,6 +245,11 @@ const statements = [
   `DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'UserProfile_userId_fkey') THEN
         ALTER TABLE "UserProfile" ADD CONSTRAINT "UserProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$`,
+  `DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'LoginEvent_userId_fkey') THEN
+        ALTER TABLE "LoginEvent" ADD CONSTRAINT "LoginEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
       END IF;
     END $$`
 ] as const;

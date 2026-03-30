@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcryptjs";
 import {
+  createLoginEvent,
   createEmailUser,
   findUserByEmail,
   markUserVerified,
@@ -54,6 +55,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       productUpdatesOptIn: user.productUpdatesOptIn,
       source: "email-signup",
       verifiedAt
+    });
+
+    await createLoginEvent({
+      userId: user.id,
+      email: user.email,
+      provider: "credentials",
+      eventType: "account-created",
+      ipAddress:
+        req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim() ??
+        req.socket.remoteAddress ??
+        null,
+      userAgent: req.headers["user-agent"] ?? null
     });
 
     return res.status(200).json({

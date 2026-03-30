@@ -28,6 +28,7 @@ model User {
   groupMessages  GroupMessage[]
   chatThreads    ChatThread[]
   profile        UserProfile?
+  loginEvents    LoginEvent[]
 }
 
 model UserProfile {
@@ -190,4 +191,16 @@ model ChatMessage {
   source    String?
   createdAt DateTime   @default(now())
   thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+}
+
+model LoginEvent {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  email      String
+  provider   String
+  eventType  String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

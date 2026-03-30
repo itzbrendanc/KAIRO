@@ -5,6 +5,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import {
+  createLoginEvent,
   createEmailUser,
   findUserByEmail,
   findUserById,
@@ -114,6 +115,13 @@ export const authOptions: NextAuthOptions = {
         user.emailVerified = Boolean(dbUser.emailVerifiedAt);
         user.marketingOptIn = dbUser.marketingOptIn;
         user.productUpdatesOptIn = dbUser.productUpdatesOptIn;
+
+        await createLoginEvent({
+          userId: dbUser.id,
+          email: dbUser.email,
+          provider: "google",
+          eventType: "sign-in"
+        });
       }
 
       if (account?.provider === "credentials" && user.email && user.id) {
@@ -124,6 +132,13 @@ export const authOptions: NextAuthOptions = {
           productUpdatesOptIn: Boolean(user.productUpdatesOptIn),
           source: "credentials-login",
           verifiedAt: user.emailVerified ? new Date() : null
+        });
+
+        await createLoginEvent({
+          userId: Number(user.id),
+          email: user.email,
+          provider: "credentials",
+          eventType: "sign-in"
         });
       }
 

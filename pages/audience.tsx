@@ -1,16 +1,20 @@
 import { useState } from "react";
 import type { GetServerSideProps } from "next";
 import { getPageSession } from "@/lib/auth";
-import { listAudienceMembers, listCampaignEvents, listCampaigns } from "@/lib/repository";
+import { listAudienceMembers, listCampaignEvents, listCampaigns, listLoginEvents, listUserAccounts } from "@/lib/repository";
 
 export default function AudiencePage({
   audience,
   campaigns,
-  events
+  events,
+  accounts,
+  loginEvents
 }: {
   audience: Array<{ id: number; email: string; status: string; marketingOptIn: boolean; productUpdatesOptIn: boolean }>;
   campaigns: Array<{ id: number; name: string; subject: string; status: string }>;
   events: Array<{ id: number; email: string; eventType: string; occurredAt: string }>;
+  accounts: Array<{ id: number; name: string | null; email: string; premium: boolean; createdAt: string }>;
+  loginEvents: Array<{ id: number; email: string; provider: string; eventType: string; createdAt: string }>;
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -63,6 +67,29 @@ export default function AudiencePage({
         </div>
       </section>
 
+      <section className="panel">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">Accounts</div>
+            <h2>Saved user accounts</h2>
+          </div>
+        </div>
+        <div className="table">
+          <div className="table-row table-head table-row-events">
+            <span>Name</span>
+            <span>Email</span>
+            <span>Created</span>
+          </div>
+          {accounts.map((account) => (
+            <div key={account.id} className="table-row table-row-events">
+              <span>{account.name ?? "Unnamed"}</span>
+              <span>{account.email}</span>
+              <span>{new Date(account.createdAt).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="two-column">
         <div className="panel">
           <div className="section-header">
@@ -106,7 +133,7 @@ export default function AudiencePage({
       <section className="panel">
         <div className="section-header">
           <div>
-            <div className="eyebrow">Delivery log</div>
+            <div className="eyebrow">Email log</div>
             <h2>Recent email events</h2>
           </div>
         </div>
@@ -121,6 +148,29 @@ export default function AudiencePage({
               <span>{event.email}</span>
               <span>{event.eventType}</span>
               <span>{new Date(event.occurredAt).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">Login log</div>
+            <h2>Recent account activity</h2>
+          </div>
+        </div>
+        <div className="table">
+          <div className="table-row table-head table-row-events">
+            <span>Email</span>
+            <span>Event</span>
+            <span>Occurred</span>
+          </div>
+          {loginEvents.map((event) => (
+            <div key={event.id} className="table-row table-row-events">
+              <span>{event.email}</span>
+              <span>{event.provider} · {event.eventType}</span>
+              <span>{new Date(event.createdAt).toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -150,10 +200,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  const [audienceResponse, campaignsResponse, eventsResponse] = await Promise.all([
+  const [audienceResponse, campaignsResponse, eventsResponse, accountsResponse, loginEventsResponse] = await Promise.all([
     listAudienceMembers(),
     listCampaigns(),
-    listCampaignEvents()
+    listCampaignEvents(),
+    listUserAccounts(),
+    listLoginEvents()
   ]);
 
   return {
@@ -175,6 +227,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       events: eventsResponse.map((event) => ({
         ...event,
         occurredAt: new Date(event.occurredAt).toISOString()
+      })),
+      accounts: accountsResponse.map((account) => ({
+        ...account,
+        createdAt: new Date(account.createdAt).toISOString()
+      })),
+      loginEvents: loginEventsResponse.map((event) => ({
+        id: event.id,
+        email: event.email,
+        provider: event.provider,
+        eventType: event.eventType,
+        createdAt: new Date(event.createdAt).toISOString()
       }))
     }
   };

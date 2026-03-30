@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, Subscription, UserProfile, Watchlist } from "@prisma/client";
+import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, LoginEvent, Subscription, UserProfile, Watchlist } from "@prisma/client";
 import { ensureDatabaseInitialized } from "@/lib/db-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { STOCKS } from "@/data/stocks";
@@ -117,6 +117,17 @@ type InMemoryUserProfile = {
   updatedAt: Date;
 };
 
+type InMemoryLoginEvent = {
+  id: number;
+  userId: number | null;
+  email: string;
+  provider: string;
+  eventType: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+};
+
 const memory = {
   userId: 1,
   verificationId: 1,
@@ -128,6 +139,7 @@ const memory = {
   chatThreadId: 1,
   chatMessageId: 1,
   profileId: 1,
+  loginEventId: 1,
   users: new Map<string, InMemoryUser>(),
   verificationTokens: new Map<string, InMemoryVerificationToken>(),
   audience: new Map<string, InMemoryAudienceMember>(),
@@ -137,7 +149,8 @@ const memory = {
   watchlist: new Map<number, InMemoryWatchlist>(),
   chatThreads: new Map<number, InMemoryChatThread>(),
   chatMessages: new Map<number, InMemoryChatMessage>(),
-  profiles: new Map<number, InMemoryUserProfile>()
+  profiles: new Map<number, InMemoryUserProfile>(),
+  loginEvents: [] as InMemoryLoginEvent[]
 };
 
 function lower(email: string) {
@@ -320,6 +333,81 @@ export async function updateUserProfile(
       memory.profiles.set(userId, existing);
       return existing as unknown as UserProfile;
     }
+  );
+}
+
+export async function createLoginEvent(input: {
+  userId?: number | null;
+  email: string;
+  provider: string;
+  eventType: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}) {
+  const normalizedEmail = lower(input.email);
+  return withFallback(
+    () =>
+      prisma.loginEvent.create({
+        data: {
+          userId: input.userId ?? null,
+          email: normalizedEmail,
+          provider: input.provider,
+          eventType: input.eventType,
+          ipAddress: input.ipAddress ?? null,
+          userAgent: input.userAgent ?? null
+        }
+      }),
+    () => {
+      const event: InMemoryLoginEvent = {
+        id: memory.loginEventId++,
+        userId: input.userId ?? null,
+        email: normalizedEmail,
+        provider: input.provider,
+        eventType: input.eventType,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
+        createdAt: new Date()
+      };
+      memory.loginEvents.push(event);
+      return event as unknown as LoginEvent;
+    }
+  );
+}
+
+export async function listLoginEvents() {
+  return withFallback(
+    () =>
+      prisma.loginEvent.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 100
+      }),
+    () => [...memory.loginEvents].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()) as LoginEvent[]
+  );
+}
+
+export async function listUserAccounts() {
+  return withFallback(
+    () =>
+      prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          premium: true,
+          createdAt: true
+        }
+      }),
+    () =>
+      Array.from(memory.users.values())
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          premium: user.premium,
+          createdAt: user.createdAt
+        }))
   );
 }
 
