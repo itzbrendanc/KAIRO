@@ -53,10 +53,10 @@ declare global {
   var __kairoBoardCache: CacheEntry<StockQuote[]> | undefined;
 }
 
-const QUOTE_TTL_MS = 15_000;
-const BOARD_TTL_MS = 20_000;
-const NEWS_TTL_MS = 120_000;
-const SIGNAL_TTL_MS = 30_000;
+const QUOTE_TTL_MS = 4_000;
+const BOARD_TTL_MS = 4_000;
+const NEWS_TTL_MS = 30_000;
+const SIGNAL_TTL_MS = 8_000;
 const ALLOW_DEMO_FALLBACK =
   process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_MARKET_DATA === "true";
 
@@ -469,6 +469,52 @@ function scoreHeadlineSentiment(text: string): NewsItem["sentiment"] {
   return "neutral";
 }
 
+function scoreArticleImportance(article: Pick<NewsItem, "title" | "summary" | "publishedAt" | "sentiment">) {
+  const text = `${article.title} ${article.summary}`.toLowerCase();
+  const keywords = [
+    "earnings",
+    "guidance",
+    "forecast",
+    "upgrade",
+    "downgrade",
+    "acquisition",
+    "merger",
+    "sec",
+    "lawsuit",
+    "ceo",
+    "revenue",
+    "profit",
+    "shares",
+    "outlook",
+    "fed",
+    "rate",
+    "tariff",
+    "breaking"
+  ];
+
+  let keywordScore = 0;
+  for (const keyword of keywords) {
+    if (text.includes(keyword)) {
+      keywordScore += 1;
+    }
+  }
+
+  const ageHours = Math.max(
+    0,
+    (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60)
+  );
+  const recencyScore = Math.max(0, 12 - ageHours);
+  const sentimentWeight = article.sentiment === "neutral" ? 0 : 0.75;
+
+  return keywordScore * 2 + recencyScore + sentimentWeight;
+}
+
+function rankImportantNews(items: NewsItem[]) {
+  return [...items]
+    .sort((left, right) => scoreArticleImportance(right) - scoreArticleImportance(left))
+    .slice(0, 6);
+}
+
 function determineTrend(price: number, maShort: number, maLong: number) {
   if (price > maShort && maShort > maLong) return "uptrend" as const;
   if (price < maShort && maShort < maLong) return "downtrend" as const;
@@ -571,7 +617,6 @@ export async function fetchNews(symbol: string) {
           const data = (await response.json()) as Array<Record<string, unknown>>;
           const items = data
             .filter((article) => article.headline && article.url)
-            .slice(0, 6)
             .map((article) => {
               const title = String(article.headline);
               const summary = String(article.summary ?? "No summary available.");
@@ -589,8 +634,9 @@ export async function fetchNews(symbol: string) {
             });
 
           if (items.length > 0) {
-            writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
-            return items;
+            const rankedItems = rankImportantNews(items);
+            writeCache(getNewsCache(), symbol, rankedItems, NEWS_TTL_MS);
+            return rankedItems;
           }
         }
       }
@@ -619,7 +665,6 @@ export async function fetchNews(symbol: string) {
                 content: String(article.content ?? "")
               })
           )
-          .slice(0, 6)
           .map((article) => ({
             title: String(article.title),
             url: String(article.url),
@@ -633,8 +678,9 @@ export async function fetchNews(symbol: string) {
           })) satisfies NewsItem[];
 
         if (items.length > 0) {
-          writeCache(getNewsCache(), symbol, items, NEWS_TTL_MS);
-          return items;
+          const rankedItems = rankImportantNews(items);
+          writeCache(getNewsCache(), symbol, rankedItems, NEWS_TTL_MS);
+          return rankedItems;
         }
       }
     } catch {

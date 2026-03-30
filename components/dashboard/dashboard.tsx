@@ -67,7 +67,7 @@ export function Dashboard({
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : "Refresh failed.");
       }
-    }, 15000);
+    }, 5000);
 
     return () => clearInterval(timer);
   }, [symbol]);
@@ -206,9 +206,9 @@ export function Dashboard({
           <div className="eyebrow">AI investing workspace</div>
           <h1>KAIRO Dashboard</h1>
           <p className="hero-copy">
-            Track live market moves, see AI-generated buy or sell signals, and read headline summaries without leaving your KAIRO workspace.
+            Track live market moves, watch the board refresh every few seconds, read the most relevant headlines first, and get AI trading context without leaving your KAIRO workspace.
           </p>
-          <div className="mini-meta">Board refreshes every 15 seconds. Latest update: {new Date(lastBoardRefresh).toLocaleTimeString()}</div>
+          <div className="mini-meta">Board refreshes every 5 seconds. Latest update: {new Date(lastBoardRefresh).toLocaleTimeString()}</div>
         </div>
         <div className="hero-controls">
           <input
@@ -269,6 +269,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Market movers</div>
               <h2>Top gainers</h2>
+              <p className="muted-copy">The strongest names on the current board, ranked by percentage move so you can spot leadership fast.</p>
             </div>
           </div>
           <div className="movers-list">
@@ -287,6 +288,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Risk watch</div>
               <h2>Top losers</h2>
+              <p className="muted-copy">The weakest names on the board right now, useful for spotting breakdowns, panic moves, or reversal setups.</p>
             </div>
           </div>
           <div className="movers-list">
@@ -307,6 +309,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Sector pulse</div>
               <h2>Leading sectors</h2>
+              <p className="muted-copy">Average performance by sector so you can see where money is rotating instead of watching single names in isolation.</p>
             </div>
           </div>
           <div className="sector-grid">
@@ -326,6 +329,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Market motion</div>
               <h2>Live terminal atmosphere</h2>
+              <p className="muted-copy">A visual product reel that shows the KAIRO workspace style while your live market modules update alongside it.</p>
             </div>
           </div>
           <div className="dashboard-gif-frame">
@@ -339,11 +343,12 @@ export function Dashboard({
 
       <section className="panel watchlist-strip">
         <div className="section-header">
-          <div>
-            <div className="eyebrow">Quick access</div>
-            <h2>Your watchlist</h2>
+            <div>
+              <div className="eyebrow">Quick access</div>
+              <h2>Your watchlist</h2>
+              <p className="muted-copy">One-click access to the names you care about most so you can jump straight into their chart, signal, and news view.</p>
+            </div>
           </div>
-        </div>
         <div className="watchlist-pills">
           {watchlist.map((item) => (
             <button key={item.id} className="watch-pill" onClick={() => refresh(item.symbol)}>
@@ -377,6 +382,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Historical chart</div>
               <h2>{data.quote.company}</h2>
+              <p className="muted-copy">Recent price history for the active symbol, used by the AI layer to read trend direction, momentum, and setup quality.</p>
             </div>
             {!premium ? <span className="pill">Premium trend depth locked</span> : null}
           </div>
@@ -418,6 +424,7 @@ export function Dashboard({
         <div className="stack compact-stack">
           <div className="panel signal-card signal-card-main">
             <div className="eyebrow">AI trade signal</div>
+            <p className="muted-copy">KAIRO combines price trend, moving averages, RSI, and current news sentiment to produce a plain-English trade stance.</p>
             <div className="signal-line">
               <span>{data.quote.symbol}</span>
               <span>{formatCurrency(data.quote.price)}</span>
@@ -449,6 +456,7 @@ export function Dashboard({
               <div>
                 <div className="eyebrow">Favorites</div>
                 <h2>Watchlist</h2>
+                <p className="muted-copy">Save favorite stocks here and pull them into the live dashboard instantly as your research list changes.</p>
               </div>
             </div>
             <div className="watchlist-form">
@@ -485,6 +493,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">Market board</div>
               <h2>S&amp;P 500 board</h2>
+              <p className="muted-copy">A live market board of tracked large-cap names. Prices refresh every 5 seconds and show which feed supplied the quote.</p>
             </div>
           </div>
           <div className="table">
@@ -508,7 +517,7 @@ export function Dashboard({
             ))}
           </div>
           <div className="mini-meta">
-            {liveBoardCount} of {board.length} board quotes are live.
+            {liveBoardCount} of {board.length} board quotes are live. True tick-by-tick streaming would require a websocket-grade market feed.
           </div>
         </div>
 
@@ -517,6 +526,7 @@ export function Dashboard({
             <div>
               <div className="eyebrow">News feed</div>
               <h2>Recent headlines</h2>
+              <p className="muted-copy">Important live headlines for the active symbol, ranked by recency and event significance so earnings, guidance, and major catalysts rise to the top.</p>
             </div>
           </div>
           <div className="news-list">
@@ -543,12 +553,13 @@ export function Dashboard({
       </section>
 
       <section className="panel terminal-panel">
-        <div className="section-header">
-          <div>
-            <div className="eyebrow">Signal cards</div>
-            <h2>Quick trade ideas</h2>
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Signal cards</div>
+              <h2>Quick trade ideas</h2>
+              <p className="muted-copy">A faster signal board for additional names so you can scan setups across the market instead of reading one stock at a time.</p>
+            </div>
           </div>
-        </div>
         <div className="card-grid signal-grid">
           {visibleSignalCards.map((signal) => {
             const stock = board.find((item) => item.symbol === signal.symbol);
