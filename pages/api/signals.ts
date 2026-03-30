@@ -15,6 +15,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ signal });
   }
 
-  const signals = await Promise.all(STOCKS.slice(0, 6).map((stock) => fetchSteadySignal(stock.symbol)));
+  const signals = await Promise.all(STOCKS.map((stock) => fetchSteadySignal(stock.symbol)));
   return res.status(200).json({ signals });
 }

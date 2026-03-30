@@ -58,6 +58,11 @@ export default function StockDetailPage({
           <strong>{signal.trend}</strong>
           <span>{signal.reasonSummary}</span>
         </div>
+        <div className="panel market-overview-card">
+          <div className="eyebrow">Earnings</div>
+          <strong>{signal.earnings.nextDate ?? "No date"}</strong>
+          <span>{signal.earnings.isLive ? signal.earnings.source : "Awaiting live earnings feed"}</span>
+        </div>
       </section>
 
       <section className="two-column">
@@ -115,11 +120,57 @@ export default function StockDetailPage({
           <p className="muted-copy">
             <strong>Reason:</strong> {signal.explanation}
           </p>
+          <p className="muted-copy">
+            <strong>Summary:</strong> {signal.stockSummary}
+          </p>
           <div className="signal-metrics">
             <span>RSI {signal.rsi}</span>
             <span>MA(5) {signal.maShort}</span>
             <span>MA(14) {signal.maLong}</span>
             <span>{signal.sentiment} sentiment</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="two-column">
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Stock summary</div>
+              <h2>Investor description</h2>
+            </div>
+          </div>
+          <p className="muted-copy">{signal.detailedDescription}</p>
+        </div>
+
+        <div className="panel terminal-panel">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Earnings snapshot</div>
+              <h2>Upcoming and recent earnings</h2>
+            </div>
+          </div>
+          <div className="lesson-list">
+            <div className="lesson-card">
+              <strong>Next expected date</strong>
+              <p className="muted-copy">{signal.earnings.nextDate ?? "No live earnings date available."}</p>
+            </div>
+            <div className="lesson-card">
+              <strong>Reporting period</strong>
+              <p className="muted-copy">{signal.earnings.period ?? "No live period in feed."}</p>
+            </div>
+            <div className="lesson-card">
+              <strong>EPS</strong>
+              <p className="muted-copy">
+                Estimate: {signal.earnings.estimateEps ?? "N/A"} · Actual: {signal.earnings.actualEps ?? "N/A"}
+              </p>
+            </div>
+            <div className="lesson-card">
+              <strong>Revenue</strong>
+              <p className="muted-copy">
+                Estimate: {signal.earnings.estimateRevenue ?? "N/A"} · Actual: {signal.earnings.actualRevenue ?? "N/A"}
+              </p>
+            </div>
           </div>
         </div>
       </section>

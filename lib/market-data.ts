@@ -30,12 +30,24 @@ export type SignalResult = {
   confidence: number;
   explanation: string;
   reasonSummary: string;
+  stockSummary: string;
+  detailedDescription: string;
   sentiment: "positive" | "neutral" | "negative";
   trend: "uptrend" | "sideways" | "downtrend";
   rsi: number;
   maShort: number;
   maLong: number;
   momentum: "strong" | "neutral" | "weak";
+  earnings: {
+    nextDate: string | null;
+    period: string | null;
+    estimateEps: number | null;
+    actualEps: number | null;
+    estimateRevenue: number | null;
+    actualRevenue: number | null;
+    source: string;
+    isLive: boolean;
+  };
 };
 
 type QuoteOptions = {
@@ -526,6 +538,99 @@ function determineTrend(price: number, maShort: number, maLong: number) {
   return "sideways" as const;
 }
 
+async function fetchEarningsSnapshot(symbol: string) {
+  const fallback = {
+    nextDate: null,
+    period: null,
+    estimateEps: null,
+    actualEps: null,
+    estimateRevenue: null,
+    actualRevenue: null,
+    source: "No live earnings feed",
+    isLive: false
+  };
+
+  if (!process.env.FINNHUB_API_KEY) {
+    return fallback;
+  }
+
+  try {
+    const fromDate = new Date().toISOString().slice(0, 10);
+    const toDate = new Date(Date.now() + 1000 * 60 * 60 * 24 * 45).toISOString().slice(0, 10);
+    const response = await fetch(
+      `https://finnhub.io/api/v1/calendar/earnings?from=${fromDate}&to=${toDate}&symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`,
+      { headers: { Accept: "application/json" }, cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    const data = (await response.json()) as {
+      earningsCalendar?: Array<Record<string, unknown>>;
+    };
+    const entry = data.earningsCalendar?.[0];
+    if (!entry) {
+      return fallback;
+    }
+
+    return {
+      nextDate: entry.date ? String(entry.date) : null,
+      period: entry.quarter ? String(entry.quarter) : null,
+      estimateEps: Number.isFinite(Number(entry.epsEstimate)) ? Number(entry.epsEstimate) : null,
+      actualEps: Number.isFinite(Number(entry.epsActual)) ? Number(entry.epsActual) : null,
+      estimateRevenue: Number.isFinite(Number(entry.revenueEstimate)) ? Number(entry.revenueEstimate) : null,
+      actualRevenue: Number.isFinite(Number(entry.revenueActual)) ? Number(entry.revenueActual) : null,
+      source: "Finnhub earnings",
+      isLive: true
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function buildDetailedDescription(args: {
+  company: string;
+  sector: string;
+  symbol: string;
+  trend: SignalResult["trend"];
+  sentiment: SignalResult["sentiment"];
+  recommendation: SignalResult["recommendation"];
+  momentum: SignalResult["momentum"];
+  earnings: SignalResult["earnings"];
+}) {
+  const { company, sector, symbol, trend, sentiment, recommendation, momentum, earnings } = args;
+  const earningsText = earnings.nextDate
+    ? `${company} is approaching an earnings date on ${earnings.nextDate}${earnings.period ? ` for ${earnings.period}` : ""}, which can increase volatility and change conviction quickly.`
+    : `${company} does not currently have a live upcoming earnings date in the feed, so the setup is being judged mostly on market behavior and headline tone.`;
+  const trendText =
+    trend === "uptrend"
+      ? `${symbol} is trading in an uptrend, which means buyers have been defending price above key moving averages.`
+      : trend === "downtrend"
+        ? `${symbol} is in a downtrend, which means price is sitting under its key moving averages and sellers still control the path of least resistance.`
+        : `${symbol} is moving sideways, which usually signals a market that is waiting for a clearer catalyst before choosing direction.`;
+  const sentimentText =
+    sentiment === "positive"
+      ? `The live news flow is supportive, with headlines leaning constructive rather than defensive.`
+      : sentiment === "negative"
+        ? `The live news flow is currently a headwind, with recent coverage leaning cautious or negative.`
+        : `The live news flow is mixed, so price action matters more than headlines alone right now.`;
+  const stanceText =
+    recommendation === "BUY"
+      ? `KAIRO rates the stock a buy because the balance of trend, momentum, and catalyst risk currently favors upside participation.`
+      : recommendation === "SELL"
+        ? `KAIRO rates the stock a sell because the balance of trend weakness, momentum, and risk signals argues for caution or reduced exposure.`
+        : `KAIRO rates the stock a hold because the evidence is not decisive enough to justify a strong entry or exit right now.`;
+  const styleText =
+    momentum === "strong"
+      ? `Momentum is still supportive, which can help continuation traders and short-term swing setups.`
+      : momentum === "weak"
+        ? `Momentum is fading, which means investors should be careful about chasing the move without a cleaner reset.`
+        : `Momentum is balanced, so investors should wait for either a stronger breakout or a cleaner pullback.`;
+
+  return `${company} is part of the ${sector} group. ${trendText} ${sentimentText} ${earningsText} ${styleText} ${stanceText}`;
+}
+
 export async function fetchInfowayPrice(symbol: string, options: QuoteOptions = {}) {
   const includeHistory = options.includeHistory ?? true;
   const cacheKey = `${symbol}:${includeHistory ? "detail" : "board"}`;
@@ -704,7 +809,7 @@ export async function fetchSteadySignal(symbol: string) {
   }
 
   const quote = await fetchInfowayPrice(symbol, { includeHistory: true });
-  const news = await fetchNews(symbol);
+  const [news, earnings] = await Promise.all([fetchNews(symbol), fetchEarningsSnapshot(symbol)]);
   const maShort = movingAverage(quote.history, 5);
   const maLong = movingAverage(quote.history, 14);
   const rsi = calculateRSI(quote.history, 14);
@@ -740,12 +845,31 @@ export async function fetchSteadySignal(symbol: string) {
       : sentiment === "negative"
         ? "news sentiment is negative"
         : "news sentiment is mixed";
+  const company = quote.company;
+  const stockSummary =
+    recommendation === "BUY"
+      ? `${company} looks constructive right now, with improving trend structure and a better balance of momentum and headline tone than most neutral setups.`
+      : recommendation === "SELL"
+        ? `${company} looks vulnerable right now, with weaker technical structure and/or a negative catalyst backdrop that raises the chance of more downside.`
+        : `${company} looks balanced right now, with enough mixed evidence that patience is more sensible than forcing a strong directional call.`;
+  const detailedDescription = buildDetailedDescription({
+    company,
+    sector: quote.sector,
+    symbol,
+    trend,
+    sentiment,
+    recommendation,
+    momentum,
+    earnings
+  });
 
   const result = {
     symbol,
     recommendation,
     confidence,
     reasonSummary: `${trend.replace("trend", " trend")} with ${sentiment} news sentiment`,
+    stockSummary,
+    detailedDescription,
     explanation:
       recommendation === "BUY"
         ? `${trendText}, ${momentumText}, and ${sentimentText}. The combined setup favors a bullish entry.`
@@ -757,7 +881,8 @@ export async function fetchSteadySignal(symbol: string) {
     rsi,
     maShort,
     maLong,
-    momentum
+    momentum,
+    earnings
   } satisfies SignalResult;
 
   if (process.env.STEADY_API_KEY) {
@@ -775,7 +900,9 @@ export async function fetchSteadySignal(symbol: string) {
             (data.recommendation as SignalResult["recommendation"] | undefined) ?? result.recommendation,
           confidence: Number(data.confidence ?? result.confidence),
           explanation: String(data.explanation ?? result.explanation),
-          reasonSummary: String(data.reasonSummary ?? result.reasonSummary)
+          reasonSummary: String(data.reasonSummary ?? result.reasonSummary),
+          stockSummary: String(data.stockSummary ?? result.stockSummary),
+          detailedDescription: String(data.detailedDescription ?? result.detailedDescription)
         } satisfies SignalResult;
 
         writeCache(getSignalCache(), symbol, liveResult, SIGNAL_TTL_MS);

@@ -9,7 +9,7 @@ export default function SignalsPage({
   signals: Awaited<ReturnType<typeof fetchSteadySignal>>[];
   premium: boolean;
 }) {
-  const visibleSignals = premium ? signals : signals.slice(0, 3);
+  const visibleSignals = premium ? signals : signals.slice(0, 6);
 
   return (
     <div className="stack">
@@ -32,10 +32,16 @@ export default function SignalsPage({
               {signal.reasonSummary}
             </div>
             <p className="muted-copy">
+              {signal.stockSummary}
+            </p>
+            <p className="muted-copy">
               {premium ? signal.explanation : "Upgrade to KAIRO Premium to unlock the full explanation for this signal."}
             </p>
             <div className="mini-meta">
               {premium ? `${Math.round(signal.confidence * 100)}% confidence` : "Premium required"}
+            </div>
+            <div className="mini-meta">
+              Earnings: {signal.earnings.nextDate ?? "No live date"} {signal.earnings.period ? `· ${signal.earnings.period}` : ""}
             </div>
             {premium ? (
               <div className="signal-metrics">
@@ -53,7 +59,7 @@ export default function SignalsPage({
           <div>
             <div className="eyebrow">Premium preview</div>
             <h2>Want the full board?</h2>
-            <p className="muted-copy">Upgrade to unlock the rest of the signal feed, historical trend context, and deeper AI trade analysis.</p>
+            <p className="muted-copy">Upgrade to unlock the rest of the signal feed, detailed stock descriptions, earnings context, historical trend analysis, and full AI reasoning.</p>
           </div>
           <a className="primary-button link-button" href="/subscription">
             Upgrade to Premium
