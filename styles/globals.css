@@ -1510,6 +1510,87 @@ textarea {
   align-items: start;
 }
 
+.academy-main-column {
+  min-width: 0;
+}
+
+.academy-player,
+.academy-side-card {
+  display: grid;
+  gap: 18px;
+}
+
+.academy-player-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.academy-video-shell {
+  padding: 12px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(79, 107, 255, 0.1), rgba(223, 76, 135, 0.08));
+  border: 1px solid rgba(108, 124, 170, 0.12);
+}
+
+.academy-video-screen {
+  position: relative;
+  min-height: 320px;
+  display: grid;
+  align-content: end;
+  gap: 12px;
+  padding: 28px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(79, 107, 255, 0.22), transparent 26%),
+    radial-gradient(circle at 80% 20%, rgba(223, 76, 135, 0.18), transparent 24%),
+    linear-gradient(180deg, #12182d 0%, #1f2342 100%);
+  color: #ffffff;
+}
+
+.academy-video-screen h3,
+.academy-video-screen p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+
+.academy-video-screen h3 {
+  max-width: 18ch;
+  font-size: clamp(1.7rem, 2.4vw, 2.3rem);
+  line-height: 1.05;
+}
+
+.academy-video-screen p {
+  max-width: 44ch;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.7;
+}
+
+.academy-video-badge {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.academy-video-glow {
+  position: absolute;
+  inset: auto auto -40px -20px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(79, 107, 255, 0.22);
+  filter: blur(24px);
+}
+
 .academy-lesson-card {
   display: grid;
   gap: 18px;
@@ -1565,6 +1646,34 @@ textarea {
 
 .academy-list li + li {
   margin-top: 8px;
+}
+
+.academy-track {
+  display: grid;
+  gap: 12px;
+}
+
+.academy-track-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(108, 124, 170, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.academy-track-item span,
+.academy-track-item small {
+  color: var(--muted);
+}
+
+.academy-track-item-active {
+  border-color: rgba(79, 107, 255, 0.24);
+  background: rgba(79, 107, 255, 0.08);
+  box-shadow: 0 16px 30px rgba(90, 108, 169, 0.1);
 }
 
 @media (max-width: 960px) {

@@ -11,6 +11,13 @@ import {
   upsertGoogleUser
 } from "@/lib/repository";
 
+export const googleAuthReady = Boolean(
+  process.env.GOOGLE_AUTH_ENABLED === "true" &&
+    process.env.GOOGLE_CLIENT_ID &&
+    process.env.GOOGLE_CLIENT_SECRET &&
+    process.env.NEXTAUTH_URL
+);
+
 export const authOptions: NextAuthOptions = {
   secret:
     process.env.NEXTAUTH_SECRET ??
@@ -22,11 +29,11 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login"
   },
   providers: [
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ...(googleAuthReady
       ? [
           GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!
           })
         ]
       : []),

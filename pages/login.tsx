@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import { AuthForm } from "@/components/auth/auth-form";
-import { getPageSession } from "@/lib/auth";
+import { getPageSession, googleAuthReady } from "@/lib/auth";
 
 export default function LoginPage({
   showGoogle
@@ -25,7 +25,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   return {
     props: {
-      showGoogle: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+      showGoogle: googleAuthReady
     }
   };
 };

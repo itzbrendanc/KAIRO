@@ -3,6 +3,7 @@ import { Dashboard } from "@/components/dashboard/dashboard";
 import { getPageSession } from "@/lib/auth";
 import { getDashboardData, getMarketBoard, getSignalBoard } from "@/lib/market-data";
 import { listUserWatchlist } from "@/lib/repository";
+import { STOCKS } from "@/data/stocks";
 
 export default function DashboardPage({
   initialData,
@@ -44,7 +45,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     getDashboardData(),
     getMarketBoard(),
     listUserWatchlist(session.user.id),
-    getSignalBoard(["AAPL", "MSFT", "NVDA", "AMZN"])
+    getSignalBoard(STOCKS.map((stock) => stock.symbol))
   ]);
 
   return {
