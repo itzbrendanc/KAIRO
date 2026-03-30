@@ -1,4 +1,5 @@
 import { STOCKS } from "@/data/stocks";
+import { MARKET_UNIVERSE } from "@/data/market-universe";
 
 export type StockQuote = {
   symbol: string;
@@ -122,7 +123,11 @@ function providerSymbolCandidates(symbol: string) {
 }
 
 function getStockMeta(symbol: string) {
-  return STOCKS.find((item) => item.symbol === symbol.toUpperCase()) ?? null;
+  return (
+    STOCKS.find((item) => item.symbol === symbol.toUpperCase()) ??
+    MARKET_UNIVERSE.find((item) => item.symbol === symbol.toUpperCase()) ??
+    null
+  );
 }
 
 function buildNewsQuery(symbol: string) {
@@ -153,7 +158,7 @@ function isRelevantArticle(symbol: string, company: string, article: { title?: s
 }
 
 function buildFallbackQuote(symbol: string) {
-  const stock = STOCKS.find((item) => item.symbol === symbol);
+  const stock = getStockMeta(symbol);
   const history = mockHistory(symbol);
   const last = history[history.length - 1];
   const previous = history[history.length - 2];

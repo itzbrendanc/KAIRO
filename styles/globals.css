@@ -194,7 +194,7 @@ textarea {
 .kairo-name {
   font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   color: #1b2240;
 }
 
@@ -431,11 +431,11 @@ textarea {
 
 .landing-stock-title {
   margin: 0;
-  max-width: 11ch;
-  font-size: clamp(3.3rem, 7vw, 5.8rem);
-  line-height: 0.96;
-  font-weight: 800;
-  letter-spacing: -0.075em;
+  max-width: 12ch;
+  font-size: clamp(3.15rem, 6.6vw, 5.35rem);
+  line-height: 1.02;
+  font-weight: 760;
+  letter-spacing: -0.05em;
   color: #10182f;
 }
 
@@ -450,8 +450,8 @@ textarea {
 .landing-stock-lead {
   max-width: 34rem;
   color: #687898;
-  line-height: 1.8;
-  font-size: 1.08rem;
+  line-height: 1.72;
+  font-size: 1.06rem;
 }
 
 .landing-stock-actions {
