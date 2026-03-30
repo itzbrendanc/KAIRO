@@ -83,6 +83,24 @@ type InMemoryWatchlist = {
   createdAt: Date;
 };
 
+type InMemoryChatThread = {
+  id: number;
+  userId: number;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type InMemoryChatMessage = {
+  id: number;
+  threadId: number;
+  role: string;
+  title: string | null;
+  content: string;
+  source: string | null;
+  createdAt: Date;
+};
+
 const memory = {
   userId: 1,
   verificationId: 1,
@@ -91,24 +109,35 @@ const memory = {
   eventId: 1,
   subscriptionId: 1,
   watchlistId: 1,
+  chatThreadId: 1,
+  chatMessageId: 1,
   users: new Map<string, InMemoryUser>(),
   verificationTokens: new Map<string, InMemoryVerificationToken>(),
   audience: new Map<string, InMemoryAudienceMember>(),
   campaigns: new Map<number, InMemoryCampaign>(),
   events: [] as InMemoryCampaignEvent[],
   subscriptions: new Map<number, InMemorySubscription>(),
-  watchlist: new Map<number, InMemoryWatchlist>()
+  watchlist: new Map<number, InMemoryWatchlist>(),
+  chatThreads: new Map<number, InMemoryChatThread>(),
+  chatMessages: new Map<number, InMemoryChatMessage>()
 };
 
 function lower(email: string) {
   return email.trim().toLowerCase();
 }
 
+function allowMemoryFallback() {
+  return process.env.NODE_ENV !== "production";
+}
+
 async function withFallback<T>(primary: () => Promise<T>, fallback: () => T | Promise<T>) {
   try {
     await ensureDatabaseInitialized();
     return await primary();
-  } catch {
+  } catch (error) {
+    if (!allowMemoryFallback()) {
+      throw error;
+    }
     return fallback();
   }
 }
@@ -751,6 +780,139 @@ export async function addWatchlistItem(userId: number, symbol: string) {
         return item;
       })()
     } as Watchlist)
+  );
+}
+
+export async function listChatThreadsForUser(userId: number) {
+  return withFallback(
+    () =>
+      prisma.chatThread.findMany({
+        where: { userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        },
+        orderBy: { updatedAt: "desc" }
+      }),
+    () =>
+      Array.from(memory.chatThreads.values())
+        .filter((thread) => thread.userId === userId)
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        .map((thread) => ({
+          ...thread,
+          messages: Array.from(memory.chatMessages.values())
+            .filter((message) => message.threadId === thread.id)
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        }))
+  );
+}
+
+export async function saveChatThreadForUser(input: {
+  userId: number;
+  threadId?: number | null;
+  title: string;
+  messages: Array<{
+    role: string;
+    title?: string | null;
+    content: string;
+    source?: string | null;
+  }>;
+}) {
+  return withFallback(
+    async () => {
+      const thread =
+        input.threadId != null
+          ? await prisma.chatThread.findFirst({
+              where: {
+                id: input.threadId,
+                userId: input.userId
+              }
+            })
+          : null;
+
+      const savedThread = thread
+        ? await prisma.chatThread.update({
+            where: { id: thread.id },
+            data: { title: input.title }
+          })
+        : await prisma.chatThread.create({
+            data: {
+              userId: input.userId,
+              title: input.title
+            }
+          });
+
+      await prisma.chatMessage.deleteMany({
+        where: { threadId: savedThread.id }
+      });
+
+      if (input.messages.length) {
+        await prisma.chatMessage.createMany({
+          data: input.messages.map((message) => ({
+            threadId: savedThread.id,
+            role: message.role,
+            title: message.title ?? null,
+            content: message.content,
+            source: message.source ?? null
+          }))
+        });
+      }
+
+      return prisma.chatThread.findUniqueOrThrow({
+        where: { id: savedThread.id },
+        include: {
+          messages: {
+            orderBy: { createdAt: "asc" }
+          }
+        }
+      });
+    },
+    () => {
+      const existing =
+        input.threadId != null
+          ? memory.chatThreads.get(input.threadId) ?? null
+          : null;
+
+      const thread: InMemoryChatThread =
+        existing ?? {
+          id: memory.chatThreadId++,
+          userId: input.userId,
+          title: input.title,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+      thread.title = input.title;
+      thread.updatedAt = new Date();
+      memory.chatThreads.set(thread.id, thread);
+
+      Array.from(memory.chatMessages.values())
+        .filter((message) => message.threadId === thread.id)
+        .forEach((message) => {
+          memory.chatMessages.delete(message.id);
+        });
+
+      input.messages.forEach((message) => {
+        const next: InMemoryChatMessage = {
+          id: memory.chatMessageId++,
+          threadId: thread.id,
+          role: message.role,
+          title: message.title ?? null,
+          content: message.content,
+          source: message.source ?? null,
+          createdAt: new Date()
+        };
+        memory.chatMessages.set(next.id, next);
+      });
+
+      return {
+        ...thread,
+        messages: Array.from(memory.chatMessages.values())
+          .filter((message) => message.threadId === thread.id)
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      };
+    }
   );
 }
 

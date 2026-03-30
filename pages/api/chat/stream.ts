@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { buildChatContext, detectSymbol } from "@/lib/chat-assistant";
-import { generateOpenAIChatReply } from "@/lib/openai-chat";
+import { streamOpenAIChatReply } from "@/lib/openai-chat";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -18,24 +18,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: "A message is required." });
   }
 
+  const conversation = (messages ?? [])
+    .filter((item) => item?.content?.trim() && (item.role === "user" || item.role === "assistant"))
+    .slice(-10);
+
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is not configured. Add it in Vercel to enable direct ChatGPT answers."
+        error: "OPENAI_API_KEY is not configured. Add it in Vercel to enable direct ChatGPT streaming."
       });
     }
 
-    const conversation = (messages ?? [])
-      .filter((item) => item?.content?.trim() && (item.role === "user" || item.role === "assistant"))
-      .slice(-10);
     const context = await buildChatContext(message);
     const symbol = detectSymbol(message);
-    const reply = await generateOpenAIChatReply(conversation, context);
-
-    return res.status(200).json({
-      ...reply,
-      symbol
+    res.writeHead(200, {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-KAIRO-Source": "chatgpt",
+      "X-KAIRO-Symbol": symbol ?? ""
     });
+
+    await streamOpenAIChatReply(conversation, context, (chunk) => {
+      res.write(chunk);
+    });
+
+    return res.end();
   } catch (error) {
     return res.status(500).json({
       error: error instanceof Error ? error.message : "Unable to generate a response."

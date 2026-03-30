@@ -31,13 +31,15 @@ export function Dashboard({
   initialBoard,
   initialWatchlist,
   initialSignals,
-  premium
+  premium,
+  canManageWatchlist
 }: {
   initialData: DashboardPayload;
   initialBoard: StockQuote[];
   initialWatchlist: Array<{ id: number; symbol: string; company: string }>;
   initialSignals: SignalResult[];
   premium: boolean;
+  canManageWatchlist: boolean;
 }) {
   const [data, setData] = useState(initialData);
   const [board, setBoard] = useState(initialBoard);
@@ -53,11 +55,11 @@ export function Dashboard({
   useEffect(() => {
     const timer = setInterval(async () => {
       try {
-        const [dashboard, stocks, watchlistPayload, signalsPayload] = await Promise.all([
+        const [dashboard, stocks, signalsPayload, watchlistPayload] = await Promise.all([
           getDashboard(symbol),
           getStocks(),
-          getWatchlist(),
-          getSignals()
+          getSignals(),
+          canManageWatchlist ? getWatchlist() : Promise.resolve({ items: watchlist })
         ]);
         setData(dashboard);
         setBoard(stocks.stocks);
@@ -70,7 +72,7 @@ export function Dashboard({
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [symbol]);
+  }, [symbol, canManageWatchlist, watchlist]);
 
   async function refresh(nextSymbol?: string) {
     const activeSymbol = nextSymbol ?? symbol;
@@ -465,11 +467,17 @@ export function Dashboard({
                 value={watchSymbol}
                 onChange={(event) => setWatchSymbol(event.target.value.toUpperCase())}
                 placeholder="Add symbol"
+                disabled={!canManageWatchlist}
               />
-              <button className="primary-button" disabled={watchlistBusy} onClick={saveWatchlistSymbol}>
+              <button className="primary-button" disabled={watchlistBusy || !canManageWatchlist} onClick={saveWatchlistSymbol}>
                 {watchlistBusy ? "Saving..." : "Add"}
               </button>
             </div>
+            {!canManageWatchlist ? (
+              <p className="muted-copy">
+                Sign in to save a personal watchlist. Guests can still browse the full market board, signals, and stock research pages.
+              </p>
+            ) : null}
             <div className="watchlist-list">
               {watchlist.map((item) => (
                 <div key={item.id} className="watchlist-item">
@@ -477,7 +485,7 @@ export function Dashboard({
                     <strong>{item.symbol}</strong>
                     <span>{item.company}</span>
                   </button>
-                  <button className="ghost-button watchlist-remove" onClick={() => deleteWatchlistSymbol(item.symbol)}>
+                  <button className="ghost-button watchlist-remove" onClick={() => deleteWatchlistSymbol(item.symbol)} disabled={!canManageWatchlist}>
                     Remove
                   </button>
                 </div>

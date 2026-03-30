@@ -73,15 +73,6 @@ export default function SignalsPage({
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getPageSession(context);
 
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
-
   const board = await getMarketBoard();
   const symbols = board.slice(0, 6).map((stock) => stock.symbol);
   const signals = await Promise.all(symbols.map((symbol) => fetchSteadySignal(symbol)));
@@ -89,7 +80,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   return {
     props: {
       session,
-      premium: session.user.premium,
+      premium: session?.user?.premium ?? true,
       signals
     }
   };

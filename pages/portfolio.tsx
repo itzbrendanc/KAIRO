@@ -281,15 +281,6 @@ export default function PortfolioPage({
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getPageSession(context);
 
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
-
   const trades = [
     {
       id: 1,

@@ -19,8 +19,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       marketingOptIn?: boolean;
       productUpdatesOptIn?: boolean;
     };
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    if (!email || !email.includes("@")) {
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
       return res.status(400).json({ error: "A valid email is required." });
     }
 
@@ -28,14 +29,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Password must be at least 8 characters." });
     }
 
-    const existing = await findUserByEmail(email);
+    const existing = await findUserByEmail(normalizedEmail);
     if (existing) {
       return res.status(409).json({ error: "That email is already registered." });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await createEmailUser({
-      email,
+      email: normalizedEmail,
       passwordHash,
       marketingOptIn: Boolean(marketingOptIn),
       productUpdatesOptIn: Boolean(productUpdatesOptIn)

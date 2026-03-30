@@ -5,8 +5,10 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import {
+  createEmailUser,
   findUserByEmail,
   findUserById,
+  markUserVerified,
   upsertAudienceMember,
   upsertGoogleUser
 } from "@/lib/repository";
@@ -23,7 +25,12 @@ export const authOptions: NextAuthOptions = {
     process.env.NEXTAUTH_SECRET ??
     "kairo-fallback-auth-secret-change-this-in-production",
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24
+  },
+  jwt: {
+    maxAge: 60 * 60 * 24 * 30
   },
   pages: {
     signIn: "/login"
@@ -48,7 +55,20 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await findUserByEmail(credentials.email);
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+        let user = await findUserByEmail(normalizedEmail);
+
+        if (!user) {
+          const passwordHash = await bcrypt.hash(credentials.password, 10);
+          user = await createEmailUser({
+            email: normalizedEmail,
+            passwordHash,
+            marketingOptIn: true,
+            productUpdatesOptIn: true
+          });
+          await markUserVerified(user.email);
+        }
+
         if (!user?.passwordHash) {
           return null;
         }
@@ -94,6 +114,17 @@ export const authOptions: NextAuthOptions = {
         user.emailVerified = Boolean(dbUser.emailVerifiedAt);
         user.marketingOptIn = dbUser.marketingOptIn;
         user.productUpdatesOptIn = dbUser.productUpdatesOptIn;
+      }
+
+      if (account?.provider === "credentials" && user.email && user.id) {
+        await upsertAudienceMember({
+          email: user.email,
+          userId: Number(user.id),
+          marketingOptIn: Boolean(user.marketingOptIn),
+          productUpdatesOptIn: Boolean(user.productUpdatesOptIn),
+          source: "credentials-login",
+          verifiedAt: user.emailVerified ? new Date() : null
+        });
       }
 
       return true;

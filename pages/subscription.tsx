@@ -6,11 +6,13 @@ import { getUserSubscription } from "@/lib/repository";
 export default function SubscriptionPage({
   premium,
   subscriptionStatus,
-  checkoutState
+  checkoutState,
+  signedIn
 }: {
   premium: boolean;
   subscriptionStatus: string | null;
   checkoutState: string | null;
+  signedIn: boolean;
 }) {
   const [isPremium] = useState(premium);
   const [status] = useState(subscriptionStatus);
@@ -20,6 +22,11 @@ export default function SubscriptionPage({
   async function openBillingFlow(path: "/api/stripe/checkout" | "/api/stripe/portal") {
     setLoading(true);
     setMessage(null);
+
+    if (!signedIn) {
+      window.location.href = "/login";
+      return;
+    }
 
     const response = await fetch(path, {
       method: "POST"
@@ -79,24 +86,15 @@ export default function SubscriptionPage({
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getPageSession(context);
-
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
-
-  const subscription = await getUserSubscription(session.user.id);
+  const subscription = session?.user ? await getUserSubscription(session.user.id) : null;
 
   return {
     props: {
       session,
-      premium: session.user.premium,
+      premium: session?.user?.premium ?? false,
       subscriptionStatus: subscription?.status ?? null,
-      checkoutState: typeof context.query.checkout === "string" ? context.query.checkout : null
+      checkoutState: typeof context.query.checkout === "string" ? context.query.checkout : null,
+      signedIn: Boolean(session?.user)
     }
   };
 };

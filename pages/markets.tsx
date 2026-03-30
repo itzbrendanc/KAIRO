@@ -1,6 +1,5 @@
 import type { GetServerSideProps } from "next";
 import Link from "next/link";
-import { getPageSession } from "@/lib/auth";
 import { getMarketBoard } from "@/lib/market-data";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
@@ -127,23 +126,11 @@ export default function MarketsPage({
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await getPageSession(context);
-
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
-
+export const getServerSideProps: GetServerSideProps = async () => {
   const board = await getMarketBoard();
 
   return {
     props: {
-      session,
       board
     }
   };

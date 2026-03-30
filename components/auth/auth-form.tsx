@@ -44,74 +44,78 @@ export function AuthForm({
     }
   }
 
+  async function createAccountAndLogin(normalizedEmail: string) {
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: normalizedEmail,
+        password,
+        marketingOptIn,
+        productUpdatesOptIn
+      })
+    });
+    const payload = await readJsonSafely(response);
+
+    if (!response.ok) {
+      setError(typeof payload.error === "string" ? payload.error : "Unable to continue.");
+      return false;
+    }
+
+    setMessage(
+      (typeof payload.message === "string" ? payload.message : undefined) ??
+        "Account created successfully. Signing you in now."
+    );
+
+    const signupLogin = await signIn("credentials", {
+      email: normalizedEmail,
+      password,
+      redirect: false
+    });
+
+    if (signupLogin?.error) {
+      setError("Your account was created, but automatic sign-in failed. Try signing in again.");
+      return false;
+    }
+
+    await router.push("/dashboard");
+    return true;
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      if (typeof window !== "undefined" && email) {
-        window.localStorage.setItem("kairo-last-email", email);
+      if (typeof window !== "undefined" && normalizedEmail) {
+        window.localStorage.setItem("kairo-last-email", normalizedEmail);
       }
 
       if (mode === "signup") {
-        const response = await fetch("/api/auth/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, marketingOptIn, productUpdatesOptIn })
-        });
-        const payload = await readJsonSafely(response);
-
-        if (!response.ok) {
-          setError(typeof payload.error === "string" ? payload.error : "Unable to continue.");
+        const created = await createAccountAndLogin(normalizedEmail);
+        if (!created) {
           setLoading(false);
           return;
         }
-
-        setMessage(
-          (typeof payload.message === "string" ? payload.message : undefined) ??
-            "Account created successfully. Signing you in now."
-        );
-
-        const signupLogin = await signIn("credentials", {
-          email,
-          password,
-          redirect: false
-        });
-
-        if (signupLogin?.error) {
-          setMessage("Account created. Sign in with your email and password.");
-          setLoading(false);
-          return;
-        }
-
-        await router.push("/dashboard");
-        return;
-      }
-
-      const loginCheck = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-      const loginPayload = await readJsonSafely(loginCheck);
-
-      if (!loginCheck.ok) {
-        setError(typeof loginPayload.error === "string" ? loginPayload.error : "Unable to continue.");
-        setLoading(false);
         return;
       }
 
       const result = await signIn("credentials", {
-        email,
+        email: normalizedEmail,
         password,
         redirect: false
       });
 
       if (result?.error) {
-        setError("Login failed. Check your email and password and try again.");
-        setLoading(false);
+        const created = await createAccountAndLogin(normalizedEmail);
+        if (!created) {
+          setLoading(false);
+          return;
+        }
+
         return;
       }
 
@@ -133,7 +137,7 @@ export function AuthForm({
         <h1>{mode === "login" ? "Sign in to KAIRO" : "Get started with KAIRO"}</h1>
         <p className="muted-copy">
           {mode === "login"
-            ? "Sign in with Google or your saved email and password. We remember the last email you used on this device."
+            ? "Continue with Google or your saved email and password. If this email is new, KAIRO will create your account automatically."
             : "Create your account once and keep using the same email whenever you return to KAIRO."}
         </p>
 
@@ -177,7 +181,7 @@ export function AuthForm({
         {message ? <div className="success-banner">{message}</div> : null}
 
         <button className="primary-button" type="submit">
-          {loading ? "Working..." : mode === "login" ? "Sign in" : "Create account"}
+          {loading ? "Working..." : mode === "login" ? "Continue" : "Create account"}
         </button>
       </form>
     </div>

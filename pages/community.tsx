@@ -26,12 +26,14 @@ export default function CommunityPage({
   groups,
   initialGroupId,
   initialMessages,
-  premium
+  premium,
+  canPost
 }: {
   groups: Group[];
   initialGroupId: number | null;
   initialMessages: Message[];
   premium: boolean;
+  canPost: boolean;
 }) {
   const [activeGroupId, setActiveGroupId] = useState<number | null>(initialGroupId);
   const [messages, setMessages] = useState(initialMessages);
@@ -162,9 +164,10 @@ export default function CommunityPage({
                   <span>Share my current watchlist</span>
                 </label>
               </div>
-              <button className="primary-button" disabled={loading || !activeGroupId} onClick={postMessage}>
+              <button className="primary-button" disabled={loading || !activeGroupId || !canPost} onClick={postMessage}>
                 {loading ? "Posting..." : "Post to group"}
               </button>
+              {!canPost ? <div className="muted-copy">Sign in to post, share your watchlist, and join the discussion. Browsing the groups is open.</div> : null}
               {error ? <div className="error-banner">{error}</div> : null}
             </div>
           </section>
@@ -219,19 +222,10 @@ export default function CommunityPage({
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getPageSession(context);
-
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
-
-  const groups = await listStudyGroups(session.user.premium);
+  const premium = session?.user?.premium ?? false;
+  const groups = await listStudyGroups(premium);
   const initialGroupId = groups[0]?.id ?? null;
-  const initialMessages = initialGroupId ? await listMessagesForGroup(initialGroupId, session.user.premium) : [];
+  const initialMessages = initialGroupId ? await listMessagesForGroup(initialGroupId, premium) : [];
 
   return {
     props: {
@@ -239,7 +233,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       groups,
       initialGroupId,
       initialMessages,
-      premium: session.user.premium
+      premium,
+      canPost: Boolean(session?.user)
     }
   };
 };

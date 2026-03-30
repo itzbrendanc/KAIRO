@@ -6,15 +6,12 @@ import { listUserWatchlist } from "@/lib/repository";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getApiSession(req, res);
 
-  if (!session?.user) {
-    return res.status(401).json({ error: "Unauthorized." });
-  }
-
   if (req.method === "GET") {
+    const premium = session?.user?.premium ?? false;
     const groupId = typeof req.query.groupId === "string" ? Number(req.query.groupId) : null;
-    const groups = await listStudyGroups(session.user.premium);
+    const groups = await listStudyGroups(premium);
     const activeGroupId = groupId && groups.some((group) => group.id === groupId) ? groupId : groups[0]?.id ?? null;
-    const messages = activeGroupId ? await listMessagesForGroup(activeGroupId, session.user.premium) : [];
+    const messages = activeGroupId ? await listMessagesForGroup(activeGroupId, premium) : [];
 
     return res.status(200).json({
       groups,
@@ -24,6 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === "POST") {
+    if (!session?.user) {
+      return res.status(401).json({ error: "Sign in to post to the community." });
+    }
     const { groupId, content, symbol, shareWatchlist } = req.body as {
       groupId?: number;
       content?: string;

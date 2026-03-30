@@ -1,6 +1,7 @@
 import type { AppProps } from "next/app";
 import { SessionProvider } from "next-auth/react";
 import { useRouter } from "next/router";
+import { FloatingChatButton } from "@/components/layout/floating-chat-button";
 import { AppShell } from "@/components/layout/app-shell";
 import "@/styles/globals.css";
 
@@ -25,6 +26,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
           <Component {...pageProps} />
         </AppShell>
       )}
+      <FloatingChatButton />
       </div>
     </SessionProvider>
   );

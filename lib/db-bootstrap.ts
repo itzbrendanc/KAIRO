@@ -127,6 +127,24 @@ const statements = [
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "GroupMessage_pkey" PRIMARY KEY ("id")
     )`,
+  `CREATE TABLE IF NOT EXISTS "ChatThread" (
+      "id" SERIAL NOT NULL,
+      "userId" INTEGER NOT NULL,
+      "title" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "ChatThread_pkey" PRIMARY KEY ("id")
+    )`,
+  `CREATE TABLE IF NOT EXISTS "ChatMessage" (
+      "id" SERIAL NOT NULL,
+      "threadId" INTEGER NOT NULL,
+      "role" TEXT NOT NULL,
+      "title" TEXT,
+      "content" TEXT NOT NULL,
+      "source" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "ChatMessage_pkey" PRIMARY KEY ("id")
+    )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_googleId_key" ON "User"("googleId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Watchlist_userId_symbol_key" ON "Watchlist"("userId", "symbol")`,
@@ -137,6 +155,8 @@ const statements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "AudienceMember_email_key" ON "AudienceMember"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "AudienceMember_userId_key" ON "AudienceMember"("userId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "StudyGroup_slug_key" ON "StudyGroup"("slug")`,
+  `CREATE INDEX IF NOT EXISTS "ChatThread_userId_idx" ON "ChatThread"("userId")`,
+  `CREATE INDEX IF NOT EXISTS "ChatMessage_threadId_idx" ON "ChatMessage"("threadId")`,
   `DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Watchlist_userId_fkey') THEN
         ALTER TABLE "Watchlist" ADD CONSTRAINT "Watchlist_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -181,6 +201,16 @@ const statements = [
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'GroupMessage_userId_fkey') THEN
         ALTER TABLE "GroupMessage" ADD CONSTRAINT "GroupMessage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
       END IF;
+    END $$`,
+  `DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ChatThread_userId_fkey') THEN
+        ALTER TABLE "ChatThread" ADD CONSTRAINT "ChatThread_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$`,
+  `DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ChatMessage_threadId_fkey') THEN
+        ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "ChatThread"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
     END $$`
 ] as const;
 
@@ -203,13 +233,7 @@ export async function ensureDatabaseInitialized() {
 
   if (!globalThis.__kairoDbBootstrapPromise) {
     globalThis.__kairoDbBootstrapPromise = (async () => {
-      const existing = await prisma.$queryRawUnsafe<Array<{ exists: string | null }>>(
-        `SELECT to_regclass('public."User"') AS exists`
-      );
-
-      if (!existing[0]?.exists) {
-        await bootstrapPostgresSchema();
-      }
+      await bootstrapPostgresSchema();
 
       globalThis.__kairoDbBootstrapped = true;
     })().catch((error) => {

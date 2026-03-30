@@ -26,6 +26,7 @@ model User {
   subscriptions  Subscription[]
   audienceMember AudienceMember?
   groupMessages  GroupMessage[]
+  chatThreads    ChatThread[]
 }
 
 model Watchlist {
@@ -150,4 +151,25 @@ model GroupMessage {
   createdAt     DateTime   @default(now())
   group         StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model ChatThread {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  title     String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        Int        @id @default(autoincrement())
+  threadId  Int
+  role      String
+  title     String?
+  content   String
+  source    String?
+  createdAt DateTime   @default(now())
+  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 }

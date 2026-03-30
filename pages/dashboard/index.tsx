@@ -10,13 +10,15 @@ export default function DashboardPage({
   initialBoard,
   initialWatchlist,
   initialSignals,
-  premium
+  premium,
+  canManageWatchlist
 }: {
   initialData: Awaited<ReturnType<typeof getDashboardData>>;
   initialBoard: Awaited<ReturnType<typeof getMarketBoard>>;
   initialWatchlist: Array<{ id: number; symbol: string; company: string }>;
   initialSignals: Awaited<ReturnType<typeof getSignalBoard>>;
   premium: boolean;
+  canManageWatchlist: boolean;
 }) {
   return (
     <Dashboard
@@ -25,26 +27,19 @@ export default function DashboardPage({
       initialWatchlist={initialWatchlist}
       initialSignals={initialSignals}
       premium={premium}
+      canManageWatchlist={canManageWatchlist}
     />
   );
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await getPageSession(context);
-
-  if (!session?.user) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false
-      }
-    };
-  }
+  const userId = session?.user?.id ?? null;
 
   const [initialData, initialBoard, initialWatchlist, initialSignals] = await Promise.all([
     getDashboardData(),
     getMarketBoard(),
-    listUserWatchlist(session.user.id),
+    userId ? listUserWatchlist(userId) : Promise.resolve([]),
     getSignalBoard(STOCKS.map((stock) => stock.symbol))
   ]);
 
@@ -55,7 +50,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       initialBoard,
       initialWatchlist,
       initialSignals,
-      premium: session.user.premium
+      premium: session?.user?.premium ?? true,
+      canManageWatchlist: Boolean(userId)
     }
   };
 };

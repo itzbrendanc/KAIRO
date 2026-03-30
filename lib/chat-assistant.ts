@@ -3,7 +3,7 @@ import { MARKET_UNIVERSE } from "@/data/market-universe";
 import { fetchInfowayPrice, fetchNews, fetchSteadySignal, getMarketBoard } from "@/lib/market-data";
 import { formatCurrency, formatPercent } from "@/lib/format";
 
-function detectSymbol(question: string) {
+export function detectSymbol(question: string) {
   const upper = question.toUpperCase();
   return MARKET_UNIVERSE.find((item) => upper.includes(item.symbol))?.symbol ?? null;
 }
@@ -88,4 +88,71 @@ export async function generateChatReply(question: string) {
     answer:
       "I can help with stock analysis, buy/hold/sell ratings, earnings context, market summaries, trading strategy, money management, watchlist ideas, and beginner lessons. Try asking about a stock symbol like AAPL, a market question like 'What matters today?', or a lesson topic like risk management."
   };
+}
+
+export async function buildChatContext(question: string) {
+  const normalized = question.trim().toLowerCase();
+  const symbol = detectSymbol(question);
+
+  if (symbol) {
+    const [quote, signal, news] = await Promise.all([
+      fetchInfowayPrice(symbol, { includeHistory: true }),
+      fetchSteadySignal(symbol),
+      fetchNews(symbol)
+    ]);
+
+    const liveNews = news.filter((item) => item.isLive).slice(0, 3);
+
+    return [
+      `Focused symbol: ${quote.symbol} (${quote.company})`,
+      `Sector: ${quote.sector}`,
+      `Price: ${formatCurrency(quote.price)}`,
+      `Change: ${formatPercent(quote.changePercent)}`,
+      `Quote source: ${quote.source}`,
+      `Signal: ${signal.recommendation}`,
+      `Confidence: ${Math.round(signal.confidence * 100)}%`,
+      `Trend: ${signal.trend}`,
+      `Momentum: ${signal.momentum}`,
+      `RSI: ${signal.rsi}`,
+      `MA(5): ${signal.maShort}`,
+      `MA(14): ${signal.maLong}`,
+      `Sentiment: ${signal.sentiment}`,
+      `Signal summary: ${signal.reasonSummary}`,
+      `Signal explanation: ${signal.explanation}`,
+      `Stock summary: ${signal.stockSummary}`,
+      `Detailed description: ${signal.detailedDescription}`,
+      `Earnings next date: ${signal.earnings.nextDate ?? "N/A"}`,
+      `Earnings period: ${signal.earnings.period ?? "N/A"}`,
+      `Live headlines: ${liveNews.length ? liveNews.map((item) => `${item.title} (${item.sentiment})`).join(" | ") : "None"}`
+    ].join("\n");
+  }
+
+  if (normalized.includes("market") || normalized.includes("today") || normalized.includes("overview")) {
+    const board = await getMarketBoard();
+    const summary = board
+      .slice(0, 12)
+      .map((item) => `${item.symbol} ${formatCurrency(item.price)} ${formatPercent(item.changePercent)} via ${item.source}`)
+      .join(" | ");
+
+    return `Current KAIRO market board: ${summary}`;
+  }
+
+  const lesson = findLesson(question);
+  if (lesson) {
+    return [
+      `Lesson title: ${lesson.title}`,
+      `Category: ${lesson.category}`,
+      `Summary: ${lesson.summary}`,
+      `Description: ${lesson.description}`,
+      `Core idea: ${lesson.coreIdea}`,
+      `Steps: ${lesson.steps.join(" ")}`,
+      `Mistakes: ${lesson.mistakes.join(" ")}`,
+      `KAIRO lesson note: ${lesson.aiLesson}`
+    ].join("\n");
+  }
+
+  return [
+    "KAIRO can discuss stocks, earnings, signals, market conditions, risk management, and academy lessons.",
+    "If data is missing or unavailable, say so plainly instead of inventing it."
+  ].join("\n");
 }
