@@ -179,6 +179,12 @@ export default function Home() {
                   Learn how to start trading, understand investing styles, and study different stock categories before risking real capital.
                 </p>
               </Link>
+              <Link href="/academy" className="lesson-card">
+                <strong>KAIRO Academy</strong>
+                <p className="muted-copy">
+                  Follow a step-by-step lesson path with YouTube-style learning links covering market basics, money management, and professional-style trading process.
+                </p>
+              </Link>
             </div>
           </div>
 

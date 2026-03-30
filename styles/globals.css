@@ -1458,6 +1458,29 @@ textarea {
   gap: 12px;
 }
 
+.academy-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.lesson-video-card {
+  position: relative;
+  overflow: hidden;
+  gap: 14px;
+}
+
+.lesson-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(79, 107, 255, 0.1);
+  color: #4f6bff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 @media (max-width: 960px) {
   .grid-3,
   .two-column,
