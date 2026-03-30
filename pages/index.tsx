@@ -36,7 +36,7 @@ export default function Home() {
             <Link href="/news-insight">News & Insight</Link>
             <Link href="/solutions">Solutions</Link>
             <Link href="/chat">AI Chat</Link>
-            <Link href="/trust">Trust</Link>
+            <Link href="/trust">Mission</Link>
           </nav>
           <Link className="primary-button link-button landing-stock-open" href="/dashboard">
             Explore Live App
@@ -73,7 +73,7 @@ export default function Home() {
               <Link href="/market-activity">Explore Market Activity</Link>
               <Link href="/stocks/AAPL">Open Stock Research</Link>
               <Link href="/solutions">See How It Works</Link>
-              <Link href="/launch-plan">See Launch Plan</Link>
+              <Link href="/academy">Start Learning</Link>
             </div>
           </div>
 
@@ -167,7 +167,7 @@ export default function Home() {
 
         <section className="landing-stock-bottom" id="solution">
           <div className="landing-stock-panel">
-            <div className="eyebrow">Built for confidence</div>
+            <div className="eyebrow">Built for learners and investors</div>
             <h2>Explore the product by workflow</h2>
             <div className="lesson-list">
               <Link href="/market-activity" className="lesson-card">
@@ -219,30 +219,27 @@ export default function Home() {
                 </p>
               </Link>
               <Link href="/trust" className="lesson-card">
-                <strong>Trust and Legal</strong>
+                <strong>KAIRO Mission</strong>
                 <p className="muted-copy">
-                  Understand how KAIRO presents AI signals responsibly, avoids hype, and uses disclaimers to build confidence with users.
-                </p>
-              </Link>
-              <Link href="/launch-plan" className="lesson-card">
-                <strong>Founder Launch Plan</strong>
-                <p className="muted-copy">
-                  Review the pricing, growth loops, and 30-day execution plan designed to push KAIRO toward a realistic $10k MRR target.
+                  Learn why KAIRO exists: to help people build financial literacy, understand market data, and make more informed investing decisions.
                 </p>
               </Link>
             </div>
           </div>
 
           <div className="landing-stock-panel landing-stock-panel-subscribe" id="about">
-            <div className="eyebrow">Stay close to launch updates</div>
-            <h3>Get product drops and platform emails</h3>
+            <div className="eyebrow">Why KAIRO exists</div>
+            <h3>A mission built around financial literacy</h3>
             <p className="muted-copy">
-              You can browse KAIRO without an account. Sign in only when you want to save a personal watchlist, keep your chat history, or upgrade with Stripe.
+              KAIRO was created to help more people understand how markets work, read financial data with confidence, and learn how to invest without feeling overwhelmed by jargon or noisy platforms.
+            </p>
+            <p className="muted-copy">
+              You can explore the platform without an account. Sign in only when you want to save your watchlist, keep your chat history, personalize your learning, or upgrade with Stripe.
             </p>
             <div className="landing-stock-actions landing-stock-subscribe-row">
               <input
                 className="text-input"
-                placeholder="Email for updates"
+                placeholder="Email for KAIRO updates"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />

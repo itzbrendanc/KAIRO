@@ -14,7 +14,7 @@ const links = [
   { href: "/community", label: "Community" },
   { href: "/settings", label: "Settings" },
   { href: "/subscription", label: "Subscription" },
-  { href: "/trust", label: "Trust" }
+  { href: "/trust", label: "Mission" }
 ];
 
 export function AppShell({
@@ -68,8 +68,8 @@ export function AppShell({
       <footer className="page app-footer">
         <span>KAIRO provides educational market research and AI-generated analysis, not personalized investment advice.</span>
         <div className="button-row">
-          <Link href="/trust">Trust and legal</Link>
-          <Link href="/launch-plan">Launch plan</Link>
+          <Link href="/trust">Mission and trust</Link>
+          <Link href="/academy">Academy</Link>
         </div>
       </footer>
     </div>

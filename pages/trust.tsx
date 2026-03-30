@@ -37,11 +37,40 @@ export default function TrustPage() {
     <div className="page stack public-page">
       <section className="panel public-hero">
         <KairoLogo size="sm" />
-        <div className="eyebrow">Trust and legal</div>
-        <h1>Build KAIRO like a durable business, not a hype machine</h1>
+        <div className="eyebrow">Mission and trust</div>
+        <h1>KAIRO exists to make financial literacy and investing more approachable</h1>
         <p className="muted-copy">
-          Strong trust design increases conversion, referrals, and retention. This page defines how KAIRO should talk about signals, risk, disclosures, and user expectations.
+          KAIRO is designed to help users learn how markets work, understand data and analytics, and make more informed decisions with clear AI explanations instead of overwhelming noise.
         </p>
+      </section>
+
+      <section className="panel terminal-panel">
+        <div className="section-header">
+          <div>
+            <div className="eyebrow">KAIRO mission</div>
+            <h2>Help users learn, not just react</h2>
+          </div>
+        </div>
+        <div className="card-grid">
+          <div className="lesson-card">
+            <strong>Teach financial literacy</strong>
+            <p className="muted-copy">
+              KAIRO helps users understand what prices, indicators, earnings, and headlines actually mean so they can build real investing knowledge over time.
+            </p>
+          </div>
+          <div className="lesson-card">
+            <strong>Make data easier to read</strong>
+            <p className="muted-copy">
+              The platform turns complex market data into plain-English context so beginners and developing investors can learn how to read analytics with more confidence.
+            </p>
+          </div>
+          <div className="lesson-card">
+            <strong>Support better decisions</strong>
+            <p className="muted-copy">
+              KAIRO is meant to reduce confusion, improve process, and help users ask better questions before they make a trade or investment decision.
+            </p>
+          </div>
+        </div>
       </section>
 
       <section className="panel terminal-panel">
@@ -97,18 +126,18 @@ export default function TrustPage() {
 
       <section className="panel premium-strip">
         <div>
-          <div className="eyebrow">Turn trust into growth</div>
-          <h2>Use clarity as a conversion asset</h2>
+          <div className="eyebrow">What users should expect</div>
+          <h2>Learn clearly, research responsibly, and grow with the platform</h2>
           <p className="muted-copy">
-            Honest data labels, visible disclaimers, and transparent methodology make the product feel safer to try and easier to recommend. That trust compounds into stronger activation and lower churn.
+            KAIRO should feel clear, calm, and useful. The goal is to help users build understanding and confidence with data, analytics, and investing workflows over time.
           </p>
         </div>
         <div className="button-row">
-          <Link className="primary-button link-button" href="/subscription">
-            See pricing
+          <Link className="primary-button link-button" href="/academy">
+            Start learning
           </Link>
-          <Link className="ghost-button link-button" href="/launch-plan">
-            Open launch plan
+          <Link className="ghost-button link-button" href="/dashboard">
+            Explore dashboard
           </Link>
         </div>
       </section>

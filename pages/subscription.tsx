@@ -79,9 +79,9 @@ export default function SubscriptionPage({
     <div className="stack">
       <section className="panel">
         <div className="eyebrow">Plans</div>
-        <h1>KAIRO pricing built for conversion and retention</h1>
+        <h1>KAIRO plans for learning, research, and better investing workflows</h1>
         <p className="muted-copy">
-          Let people explore first, then convert them when they want saved workflows, alerts, portfolio analysis, and full AI reasoning. That is the simplest path from free usage to recurring revenue.
+          Start with the free experience to learn the platform, explore signals, and build confidence. Upgrade when you want saved workflows, deeper analysis, alerts, and richer portfolio tools.
         </p>
         {checkoutState === "success" ? <p className="success-copy">Stripe checkout completed. Premium access will update as soon as the webhook confirms your subscription.</p> : null}
         {checkoutState === "canceled" ? <p className="muted-copy">Stripe checkout was canceled. Your account is still on the free plan.</p> : null}
@@ -127,13 +127,13 @@ export default function SubscriptionPage({
           </p>
         </div>
         <div className="panel tier-card">
-          <div className="eyebrow">Path to $10k MRR</div>
-          <h2>Use one simple scorecard</h2>
+          <div className="eyebrow">Why upgrade</div>
+          <h2>Move from exploration to a full investing workspace</h2>
           <p className="muted-copy">
-            180 Pro users at $39/month generate $7,020 MRR. 30 Pro+ users at $99/month generate $2,970 MRR. Together that is $9,990 MRR, so one more Pro user pushes KAIRO over the goal.
+            Premium is for users who want more than just a market snapshot. It unlocks the deeper AI reasoning layer, saved research flows, richer alerts, and stronger portfolio guidance.
           </p>
           <div className="success-banner">
-            Free users should see enough value to form a habit. Paid users should unlock the deeper workflows that justify staying subscribed.
+            KAIRO’s mission is to make financial literacy, investing education, and market analysis more accessible to everyday users.
           </div>
         </div>
       </div>
