@@ -226,12 +226,12 @@ export function Dashboard({
       {error ? <div className="error-banner">{error}</div> : null}
       {!data.quote.isLive ? (
         <div className="error-banner">
-          Live stock data is not active for this deployment yet. Add a valid `FINNHUB_API_KEY`, `ALPHA_VANTAGE_API_KEY`, or `INFOWAY_API_KEY` in Vercel to replace demo prices.
+          Live stock data is unavailable for this deployment right now. Add a valid `FINNHUB_API_KEY`, `ALPHA_VANTAGE_API_KEY`, or `INFOWAY_API_KEY` in Vercel to restore real market prices.
         </div>
       ) : null}
       {data.quote.isLive && liveNewsCount === 0 ? (
         <div className="success-banner">
-          Live prices are active. Add `FINNHUB_API_KEY` or `NEWS_API_KEY` as well if you want live market headlines instead of demo news.
+          Live prices are active. Add `FINNHUB_API_KEY` or `NEWS_API_KEY` as well if you want live market headlines in the news feed.
         </div>
       ) : null}
 
@@ -244,7 +244,7 @@ export function Dashboard({
         <StatCard
           label="S&P 500"
           value={data.index.value.toLocaleString()}
-          helper={`${formatPercent(data.index.dayChange)} · ${data.index.isLive ? "Live" : "Demo"}`}
+          helper={`${formatPercent(data.index.dayChange)} · ${data.index.isLive ? "Live" : "Unavailable"}`}
         />
         <StatCard
           label="AI Signal"
@@ -437,7 +437,7 @@ export function Dashboard({
             </p>
             {!data.quote.isLive ? (
               <p className="muted-copy">
-                This signal is currently based on demo quote data. Configure a live quote provider to make the analysis reflect the real market.
+                This signal is currently limited by missing live quote coverage. Configure a live quote provider to make the analysis reflect the real market.
               </p>
             ) : null}
             <div className="mini-meta">
@@ -512,7 +512,7 @@ export function Dashboard({
                 <span className={stock.changePercent >= 0 ? "positive" : "negative"}>
                   {formatPercent(stock.changePercent)}
                 </span>
-                <span className="mini-meta">{stock.isLive ? stock.source : "Demo"}</span>
+                <span className="mini-meta">{stock.isLive ? stock.source : "Unavailable"}</span>
               </button>
             ))}
           </div>

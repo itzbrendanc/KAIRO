@@ -3,6 +3,7 @@ import type { EmailCampaign, EmailCampaignEvent, EmailVerificationToken, Subscri
 import { ensureDatabaseInitialized } from "@/lib/db-bootstrap";
 import { prisma } from "@/lib/prisma";
 import { STOCKS } from "@/data/stocks";
+import { MARKET_UNIVERSE } from "@/data/market-universe";
 
 type InMemoryUser = {
   id: number;
@@ -696,34 +697,17 @@ export async function listUserWatchlist(userId: number) {
         where: { userId },
         orderBy: { createdAt: "desc" }
       }),
-    () => {
-      const existing = Array.from(memory.watchlist.values())
+    () =>
+      Array.from(memory.watchlist.values())
         .filter((item) => item.userId === userId)
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-      if (existing.length > 0) {
-        return existing as Watchlist[];
-      }
-
-      const seeded = STOCKS.slice(0, 3).map((stock) => {
-        const item: InMemoryWatchlist = {
-          id: memory.watchlistId++,
-          userId,
-          symbol: stock.symbol,
-          company: stock.company,
-          createdAt: new Date()
-        };
-        memory.watchlist.set(item.id, item);
-        return item;
-      });
-
-      return seeded as Watchlist[];
-    }
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()) as Watchlist[]
   );
 }
 
 export async function addWatchlistItem(userId: number, symbol: string) {
-  const stock = STOCKS.find((item) => item.symbol === symbol.toUpperCase());
+  const stock =
+    STOCKS.find((item) => item.symbol === symbol.toUpperCase()) ??
+    MARKET_UNIVERSE.find((item) => item.symbol === symbol.toUpperCase());
   if (!stock) {
     throw new Error("Unknown symbol.");
   }

@@ -70,8 +70,12 @@ const QUOTE_TTL_MS = 4_000;
 const BOARD_TTL_MS = 4_000;
 const NEWS_TTL_MS = 30_000;
 const SIGNAL_TTL_MS = 8_000;
-const ALLOW_DEMO_FALLBACK =
-  process.env.NODE_ENV !== "production" || process.env.ALLOW_DEMO_MARKET_DATA === "true";
+const ALLOW_DEMO_FALLBACK = process.env.ALLOW_DEMO_MARKET_DATA === "true";
+const CRYPTO_IDS: Record<string, string> = {
+  "BTC-USD": "bitcoin",
+  "ETH-USD": "ethereum",
+  "SOL-USD": "solana"
+};
 
 function getQuoteCache() {
   if (!globalThis.__kairoQuoteCache) {
@@ -183,7 +187,7 @@ function buildFallbackQuote(symbol: string) {
     changePercent: Number((((last - previous) / previous) * 100).toFixed(2)),
     history,
     historyLabels: buildHistoryLabels(history.length),
-    source: "Demo Feed",
+    source: "Unavailable",
     fetchedAt: new Date().toISOString(),
     isLive: false
   } satisfies StockQuote;
@@ -193,8 +197,113 @@ function providerConfigured() {
   return Boolean(
     process.env.FINNHUB_API_KEY ||
       process.env.ALPHA_VANTAGE_API_KEY ||
-      process.env.INFOWAY_API_KEY
+      process.env.INFOWAY_API_KEY ||
+      Object.keys(CRYPTO_IDS).length
   );
+}
+
+async function fetchCoinGeckoQuote(symbol: string, fallback: StockQuote, includeHistory: boolean) {
+  const coinId = CRYPTO_IDS[symbol.toUpperCase()];
+  if (!coinId) {
+    return null;
+  }
+
+  try {
+    const [quoteResponse, historyResponse] = await Promise.all([
+      fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd&include_24hr_change=true`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      }),
+      includeHistory
+        ? fetch(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart?vs_currency=usd&days=1&interval=hourly`, {
+            headers: { Accept: "application/json" },
+            cache: "no-store"
+          })
+        : Promise.resolve(null)
+    ]);
+
+    if (!quoteResponse.ok) {
+      return null;
+    }
+
+    const quoteData = (await quoteResponse.json()) as Record<string, { usd?: number; usd_24h_change?: number }>;
+    const coin = quoteData[coinId];
+    if (!coin?.usd) {
+      return null;
+    }
+
+    let history = fallback.history;
+    let historyLabels = fallback.historyLabels;
+    if (historyResponse?.ok) {
+      const historyData = (await historyResponse.json()) as { prices?: Array<[number, number]> };
+      const prices = historyData.prices?.slice(-21) ?? [];
+      if (prices.length > 3) {
+        history = prices.map((entry) => Number(entry[1].toFixed(2)));
+        historyLabels = prices.map((entry) =>
+          new Date(entry[0]).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        );
+      }
+    }
+
+    return {
+      ...fallback,
+      price: Number(coin.usd.toFixed(2)),
+      changePercent: Number((coin.usd_24h_change ?? fallback.changePercent).toFixed(2)),
+      history,
+      historyLabels,
+      source: "CoinGecko",
+      fetchedAt: new Date().toISOString(),
+      isLive: true
+    } satisfies StockQuote;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchForexQuote(symbol: string, fallback: StockQuote) {
+  const normalized = symbol.toUpperCase();
+  if (!/^[A-Z]{6}$/.test(normalized)) {
+    return null;
+  }
+
+  const base = normalized.slice(0, 3);
+  const quote = normalized.slice(3);
+
+  try {
+    const [currentResponse, previousResponse] = await Promise.all([
+      fetch(`https://api.frankfurter.app/latest?from=${base}&to=${quote}`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      }),
+      fetch(`https://api.frankfurter.app/${new Date(Date.now() - 86400000).toISOString().slice(0, 10)}?from=${base}&to=${quote}`, {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      })
+    ]);
+
+    if (!currentResponse.ok || !previousResponse.ok) {
+      return null;
+    }
+
+    const currentData = (await currentResponse.json()) as { amount?: number; rates?: Record<string, number>; date?: string };
+    const previousData = (await previousResponse.json()) as { rates?: Record<string, number> };
+    const currentRate = currentData.rates?.[quote];
+    const previousRate = previousData.rates?.[quote];
+    if (!currentRate || !previousRate) {
+      return null;
+    }
+
+    return {
+      ...fallback,
+      price: Number(currentRate.toFixed(4)),
+      changePercent: Number((((currentRate - previousRate) / previousRate) * 100).toFixed(2)),
+      source: "Frankfurter",
+      fetchedAt: currentData.date ? new Date(currentData.date).toISOString() : new Date().toISOString(),
+      isLive: true
+    } satisfies StockQuote;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchFinnhubHistory(symbol: string, fallback: StockQuote) {
@@ -644,16 +753,27 @@ export async function fetchInfowayPrice(symbol: string, options: QuoteOptions = 
   const liveQuote =
     (await fetchFinnhubQuote(symbol, fallback, includeHistory)) ??
     (await fetchAlphaVantageQuote(symbol, fallback, includeHistory)) ??
-    (await fetchInfowayQuote(symbol, fallback, includeHistory));
+    (await fetchInfowayQuote(symbol, fallback, includeHistory)) ??
+    (await fetchCoinGeckoQuote(symbol, fallback, includeHistory)) ??
+    (await fetchForexQuote(symbol, fallback));
 
   const result =
     liveQuote ??
     (ALLOW_DEMO_FALLBACK || !providerConfigured()
       ? {
           ...fallback,
-          source: providerConfigured() ? "Demo Feed (Provider Failed)" : "Demo Feed (Missing Live API Key)"
+          source: providerConfigured() ? "Demo Feed (Provider Failed)" : "Demo Feed (Explicitly Enabled)"
         }
-      : fallback);
+      : {
+          ...fallback,
+          price: 0,
+          changePercent: 0,
+          history: [],
+          historyLabels: [],
+          source: "Live feed unavailable",
+          fetchedAt: new Date().toISOString(),
+          isLive: false
+        });
 
   writeCache(getQuoteCache(), cacheKey, result, QUOTE_TTL_MS);
   return result;
@@ -701,17 +821,7 @@ export async function fetchNews(symbol: string) {
   const stock = getStockMeta(symbol);
   const company = stock?.company ?? symbol;
 
-  const fallback = [
-    {
-      title: `${symbol} attracts investor attention ahead of the next market catalyst`,
-      url: "#",
-      source: "KAIRO Demo Wire",
-      summary: "Live financial news is not configured yet for this deployment.",
-      sentiment: "neutral",
-      publishedAt: new Date().toISOString(),
-      isLive: false
-    }
-  ] satisfies NewsItem[];
+  const fallback = [] satisfies NewsItem[];
 
   if (process.env.FINNHUB_API_KEY) {
     try {
@@ -943,7 +1053,7 @@ export async function getMarketBoard() {
     STOCKS.map((stock) => fetchInfowayPrice(stock.symbol, { includeHistory: false }))
   );
   const liveStocks = stocks.filter((stock) => stock.isLive);
-  const board = liveStocks.length > 0 ? liveStocks : stocks;
+  const board = liveStocks;
 
   globalThis.__kairoBoardCache = {
     value: board,

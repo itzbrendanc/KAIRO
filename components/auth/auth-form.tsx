@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { signIn } from "next-auth/react";
 import { KairoLogo } from "@/components/branding/kairo-logo";
+import { useEffect } from "react";
 
 export function AuthForm({
   mode,
@@ -18,6 +19,14 @@ export function AuthForm({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const remembered = window.localStorage.getItem("kairo-last-email");
+    if (remembered) {
+      setEmail(remembered);
+    }
+  }, []);
 
   async function readJsonSafely(response: Response) {
     const text = await response.text();
@@ -42,6 +51,10 @@ export function AuthForm({
     setMessage(null);
 
     try {
+      if (typeof window !== "undefined" && email) {
+        window.localStorage.setItem("kairo-last-email", email);
+      }
+
       if (mode === "signup") {
         const response = await fetch("/api/auth/signup", {
           method: "POST",
@@ -120,8 +133,8 @@ export function AuthForm({
         <h1>{mode === "login" ? "Sign in to KAIRO" : "Get started with KAIRO"}</h1>
         <p className="muted-copy">
           {mode === "login"
-            ? "Sign in with Google or your email and password."
-            : "Create your account and choose whether to receive product and marketing updates."}
+            ? "Sign in with Google or your saved email and password. We remember the last email you used on this device."
+            : "Create your account once and keep using the same email whenever you return to KAIRO."}
         </p>
 
         {showGoogle ? (
