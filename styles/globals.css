@@ -1481,12 +1481,101 @@ textarea {
   font-weight: 700;
 }
 
+.academy-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.8fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.academy-hero-copy,
+.academy-hero-panel,
+.academy-side-card {
+  display: grid;
+  gap: 16px;
+}
+
+.academy-hero-panel {
+  align-content: start;
+  padding: 28px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.96) 0%, rgba(236, 242, 255, 0.96) 100%);
+  border: 1px solid rgba(108, 124, 170, 0.12);
+}
+
+.academy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.55fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.academy-lesson-card {
+  display: grid;
+  gap: 18px;
+}
+
+.academy-lesson-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.academy-duration {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(79, 107, 255, 0.08);
+  color: #4f6bff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.academy-core-idea {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(123, 77, 240, 0.06);
+  border: 1px solid rgba(123, 77, 240, 0.12);
+  color: #243152;
+  line-height: 1.7;
+}
+
+.academy-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.academy-subcard {
+  gap: 12px;
+}
+
+.academy-ai-box {
+  background: linear-gradient(180deg, rgba(249, 245, 255, 0.96) 0%, rgba(241, 237, 255, 0.96) 100%);
+  border-color: rgba(123, 77, 240, 0.16);
+}
+
+.academy-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.academy-list li + li {
+  margin-top: 8px;
+}
+
 @media (max-width: 960px) {
   .grid-3,
   .two-column,
   .hero,
   .dashboard-grid,
   .market-overview-grid,
+  .academy-hero,
+  .academy-layout,
+  .academy-section-grid,
   .landing-stock-hero,
   .landing-stock-bottom,
   .landing-stock-tickers {
