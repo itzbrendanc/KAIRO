@@ -73,9 +73,11 @@ npm install
 cp .env.example .env
 ```
 
-3. Add your auth and billing configuration to `.env`:
+3. Add your auth, database, and billing configuration to `.env`:
 
 ```env
+DATABASE_URL="postgresql://postgres.PROJECT_REF:YOUR_DB_PASSWORD@aws-0-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require"
+DIRECT_URL="postgresql://postgres:YOUR_DB_PASSWORD@db.PROJECT_REF.supabase.co:5432/postgres?sslmode=require"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="replace-with-a-long-random-secret"
 APP_URL="http://localhost:3000"
@@ -113,4 +115,6 @@ http://localhost:3000
 - For local Stripe webhook testing, run the Stripe CLI and forward events to `/api/stripe/webhook`.
 - To enable live stock pricing, add `FINNHUB_API_KEY` or `ALPHA_VANTAGE_API_KEY` to `.env`. KAIRO falls back to mock prices when neither provider is configured.
 - To enable live market news, add `FINNHUB_API_KEY` or `NEWS_API_KEY` to `.env`. KAIRO tags each headline as positive, neutral, or negative using a lightweight sentiment pass.
-- SQLite works well for local development. For a Vercel deployment, switch `DATABASE_URL` to a hosted Postgres database because SQLite files are not a durable production database on Vercel.
+- For Supabase on Vercel, use the pooled connection string for `DATABASE_URL` and the direct database connection for `DIRECT_URL`.
+- The pooled runtime URL should usually use port `6543` with `pgbouncer=true`, while the direct URL should use port `5432` with `sslmode=require`.
+- If signup says it cannot reach `db....supabase.co:5432`, your runtime app is likely using the direct URL in `DATABASE_URL` instead of the pooled URL.

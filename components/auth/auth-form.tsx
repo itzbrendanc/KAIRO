@@ -154,14 +154,23 @@ export function AuthForm({
         )}
 
         {showGoogle ? (
-          <button
-            className="ghost-button social-button"
-            type="button"
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-          >
-            {mode === "login" ? "Continue with Google" : "Sign up with Google"}
-          </button>
-        ) : null}
+          <>
+            <div className="success-banner">
+              Google sign-in is available on this app.
+            </div>
+            <button
+              className="ghost-button social-button"
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            >
+              {mode === "login" ? "Continue with Google" : "Sign up with Google"}
+            </button>
+          </>
+        ) : (
+          <div className="muted-copy">
+            Google sign-in is currently unavailable. Use your email and password, or finish the Google OAuth setup in production to turn it on.
+          </div>
+        )}
 
         {mode === "signup" ? (
           <input
