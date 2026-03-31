@@ -16,9 +16,33 @@ function isSupabasePoolerUrl(url: string | undefined) {
   );
 }
 
+function firstNonEmpty(values: Array<string | undefined>) {
+  return values.find((value) => Boolean(value && value.trim()));
+}
+
 function resolveDatasourceUrl() {
   const databaseUrl = process.env.DATABASE_URL;
   const directUrl = process.env.DIRECT_URL;
+  const postgresPrismaUrl = process.env.POSTGRES_PRISMA_URL;
+  const postgresUrl = process.env.POSTGRES_URL;
+  const postgresNonPoolingUrl = process.env.POSTGRES_URL_NON_POOLING;
+  const supabaseDatabaseUrl = process.env.SUPABASE_DATABASE_URL;
+  const supabaseDirectUrl = process.env.SUPABASE_DIRECT_URL;
+
+  const pooledCandidates = [
+    postgresPrismaUrl,
+    supabaseDatabaseUrl,
+    databaseUrl,
+    directUrl,
+    postgresUrl,
+    postgresNonPoolingUrl,
+    supabaseDirectUrl
+  ];
+
+  const pooledUrl = pooledCandidates.find(isSupabasePoolerUrl);
+  if (pooledUrl) {
+    return pooledUrl;
+  }
 
   // Recover from a common Supabase/Vercel misconfiguration where the direct
   // connection string is saved into DATABASE_URL and the pooled string is saved
@@ -27,7 +51,15 @@ function resolveDatasourceUrl() {
     return directUrl;
   }
 
-  return databaseUrl;
+  return firstNonEmpty([
+    postgresPrismaUrl,
+    supabaseDatabaseUrl,
+    databaseUrl,
+    postgresUrl,
+    directUrl,
+    postgresNonPoolingUrl,
+    supabaseDirectUrl
+  ]);
 }
 
 function createPrismaClient() {
