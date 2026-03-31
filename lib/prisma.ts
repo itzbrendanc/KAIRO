@@ -4,8 +4,35 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
+function isSupabaseDirectUrl(url: string | undefined) {
+  return Boolean(url && /@db\.[^.]+\.supabase\.co:5432\//.test(url));
+}
+
+function isSupabasePoolerUrl(url: string | undefined) {
+  return Boolean(
+    url &&
+      (url.includes(".pooler.supabase.com:5432") ||
+        url.includes(".pooler.supabase.com:6543"))
+  );
+}
+
+function resolveDatasourceUrl() {
+  const databaseUrl = process.env.DATABASE_URL;
+  const directUrl = process.env.DIRECT_URL;
+
+  // Recover from a common Supabase/Vercel misconfiguration where the direct
+  // connection string is saved into DATABASE_URL and the pooled string is saved
+  // into DIRECT_URL. Prisma runtime should prefer the pooled URL.
+  if (isSupabaseDirectUrl(databaseUrl) && isSupabasePoolerUrl(directUrl)) {
+    return directUrl;
+  }
+
+  return databaseUrl;
+}
+
 function createPrismaClient() {
   return new PrismaClient({
+    datasourceUrl: resolveDatasourceUrl(),
     log: ["error"]
   });
 }
